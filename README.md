@@ -13,3 +13,6 @@ different from either in- or out-of-distribution data is introduced to improve t
 neural networks. We further investigate how we can improve the model sensitivity with respect to OOD
 data through Geometric Sensitivity Decomposition. We apply the methods on the facial information data
 and improve the reliability of the machine learning algorithms across different racial and ethnic groups.
+
+
+Beep boop
