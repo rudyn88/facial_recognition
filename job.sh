@@ -4,6 +4,6 @@
 #SBATCH --error=myjob_error.log
 #SBATCH --gres=gpu:0
 
-cd /local/scratch/NETID/DIRECTORY   
+cd /local/scratch/gbaron2
 source venv/bin/activate
 python train.py
