@@ -117,9 +117,10 @@ class Net(nn.Module):
 # testset = ImageFolder(root='C:/Users/aashr/OneDrive/Documents/Research Projects/EmoryREU/UTKFace.tar/UTKFace/UTKFace', transform=transform)
 # testloader = DataLoader(testset, batch_size=4, shuffle=False, num_workers=2)
 
-classes = ('male', 'female')
-
-
+#classes = ('male', 'female')
+classes = ('white', 'Black', 'Asian', 'Indian', 'Other')
+correct_pred = {classname: 0 for classname in classes}
+total_pred = {classname: 0 for classname in classes}
 net = Net()
 
 criterion = nn.CrossEntropyLoss()
@@ -158,13 +159,27 @@ if __name__ == '__main__':
             truth = torch.cat((truth, labels), 0)
             pred = torch.cat((pred, predicted), 0)
 
+            for label, prediction in zip(labels, predicted):
+                if label == prediction:
+                    correct_pred[classes[label]] += 1
+                total_pred[classes[label]] += 1
+    print(total_pred)
+    print(correct_pred)
+
+    # print accuracy for each class
+    for classname, correct_count in correct_pred.items():
+         accuracy = 100 * float(correct_count) / total_pred[classname]
+         print(f'Accuracy for class: {classname:5s} is {accuracy:.1f} %')
 
     print('Accuracy of the network on the test images: %.2f %%' % (100 * correct / total))
-
+    correct_pred = 0
+    total_pred = 0
     # Check accuracy for each class
-    class_correct = list(0. for _ in range(len(classes)))
-    class_total = list(0. for _ in range(len(classes)))
 
+
+#    for classname, correct_count in correct_pred.items():
+#        accuracy = 100 * float(correct_count) / total_pred[classname]
+#        print(f'Accuracy for class: {classname:5s} is {accuracy:.1f} %')
 
 #    RocCurveDisplay.from_predictions(truth, pred, color="darkorange")
 #    plt.plot([0, 1], [0, 1], "k--", label="chance level (AUC = 0.5)")
