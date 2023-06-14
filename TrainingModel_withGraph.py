@@ -127,6 +127,10 @@ net = Net()
 
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+graph_lossE1 = []
+step_pointE1 = []
+graph_lossE2, step_pointE2 = [], []
+graph_lossE3, step_pointE3 = [], []
 
 # Train
 if __name__ == '__main__':
@@ -141,8 +145,20 @@ if __name__ == '__main__':
             optimizer.step()
 
             running_loss += loss.item()
-            if i % 2000 == 1999:
-                print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 2000))
+
+            if i % 200 == 199:
+                print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 200))
+                if epoch == 0:
+                    graph_lossE1.append(running_loss / 200)
+                    step_pointE1.append(i)
+
+                if epoch == 1:
+                    graph_lossE2.append(running_loss / 200)
+                    step_pointE2.append(i)
+
+                if epoch == 2:
+                    graph_lossE3.append(running_loss / 200)
+                    step_pointE3.append(i)
                 running_loss = 0.0
 
     print('Finished Training')
@@ -182,8 +198,15 @@ if __name__ == '__main__':
     plt.legend(['Predicted', 'Actual'])
     plt.show()
 
-
-
+    plt.figure
+    plt.plot(step_pointE1, graph_lossE1, label= 'Epoch 1')
+    plt.plot(step_pointE2, graph_lossE2, label= 'Epoch 2')
+    plt.plot(step_pointE3, graph_lossE3, label= 'Epoch 3')
+    plt.xlabel("Number of iteration")
+    plt.ylabel("Loss")
+    plt.title("Loss vs Number of iteration")
+    plt.legend()
+    plt.show()
 
 #    correct_pred = 0
 #    total_pred = 0
