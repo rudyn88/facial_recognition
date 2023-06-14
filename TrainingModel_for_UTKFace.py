@@ -19,6 +19,10 @@ from sklearn.model_selection import train_test_split
 from matplotlib.legend_handler import HandlerBase
 import matplotlib.patches as mpatches
 import torch.nn.functional as F
+from sklearn.metrics import roc_auc_score
+from sklearn.metrics import accuracy_score, confusion_matrix, roc_auc_score, roc_curve, balanced_accuracy_score, RocCurveDisplay
+import matplotlib.patches as mpatches
+import matplotlib.lines as mlines
 
 
 #Defining a dataset class
@@ -132,7 +136,9 @@ if __name__ == '__main__':
                 running_loss = 0.0
 
     print('Finished Training')
-
+    truth = torch.tensor([])
+    pred = torch.tensor([])
+    
 # Test the network on the test data
     correct = 0
     total = 0
@@ -143,9 +149,20 @@ if __name__ == '__main__':
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
+            truth = torch.cat((truth, labels), 0)
+            pred = torch.cat((pred, predicted), 0)
 
     print('Accuracy of the network on the test images: %.2f %%' % (100 * correct / total))
 
 # Check accuracy for each class
     class_correct = list(0. for _ in range(len(classes)))
     class_total = list(0. for _ in range(len(classes)))
+    
+    RocCurveDisplay.from_predictions(truth, pred, color="darkorange")
+    plt.plot([0, 1], [0, 1], "k--", label="chance level (AUC = 0.5)")
+    plt.axis("square")
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    plt.title("ROC curve")
+    plt.legend()
+    plt.show()
