@@ -95,13 +95,17 @@ class FairfaceDataset(Dataset):
         if self.transform is not None:
             image = self.transform(image)
 
-        class_label = self.get_class_label(os.path.basename(image_path))
-
-        return image, class_label
+        return image
 
     # returns total number of images
     def __len__(self):
         return len(self.images)
+
+def display(img):
+    plt.imshow(img[:, :, 0])
+    plt.set_cmap('gray')
+    plt.show()
+
 
 # Set the root directory of the UTKFace dataset
 root_dir = 'C:/Users/lucab/Downloads/UTKFace'
@@ -121,7 +125,7 @@ utkface_dataset = UTKFaceDataset(root_dir, transform=transform)
 utkface_loader = torch.utils.data.DataLoader(utkface_dataset, batch_size=4, shuffle=True, num_workers=2)
 
 fairfair_dataset = FairfaceDataset(root_dir_fair, transform=transform)
-fairface_loader = torch.utils.data.DataLoader(fairfair_dataset, batchsize = 4, shuffle=True, num_workers=2)
+fairface_loader = torch.utils.data.DataLoader(fairfair_dataset, batch_size= 4, shuffle=True, num_workers=2)
 
 
 class Net(nn.Module):
@@ -172,7 +176,7 @@ fairg, fairr = [], []
 
 # Train
 if __name__ == '__main__':
-    for epoch in range(3):
+    for epoch in range(1):
         running_loss = 0.0
         for i, data in enumerate(utkface_loader, 0):
             inputs, labels = data
@@ -205,6 +209,7 @@ if __name__ == '__main__':
     # Test the network on the test data
     correct = 0
     total = 0
+    newtotal = 0
     with torch.no_grad():
         for data in utkface_loader:
             images, labels = data
@@ -222,9 +227,12 @@ if __name__ == '__main__':
         for data in fairface_loader:
             images = data
             outputs = net(images)
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
+            predicted = torch.max(outputs.data)
+            newtotal += 1
             fairr.append(predicted)
+            sample = images[newtotal]
+            print('Race:', int(predicted))
+            display(sample)
 
     print(total_pred)
     print(correct_pred)
@@ -254,14 +262,6 @@ if __name__ == '__main__':
     plt.show()
 
 
-    def display(img):
-        plt.imshow(img[:, :, 0])
-        plt.set_cmap('gray')
-        plt.show()
-    idx = 500
-    sample = images[idx]
-    print( 'Race:', fairr[idx])
-    display(sample)
 
 #    correct_pred = 0
 #    total_pred = 0
