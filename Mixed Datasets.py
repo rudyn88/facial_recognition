@@ -1,4 +1,9 @@
 # importing all packages that may be needed
+import csv
+import random
+
+from matplotlib import image as mpimg
+import cv2
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -49,7 +54,7 @@ class UTKFaceDataset(Dataset):
         age, gender, race = filename.split('_')[:3]
         # Assign class label based on gender (0 for male, 1 for female)
         #class_label = 0 if int(gender) == 0 else 1
-        class_label = int(race) #just change this to age, gender, or race
+        class_label = int(gender) #just change this to age, gender, or race
         #class_label = int(age)
 
         return class_label
@@ -101,10 +106,8 @@ class FairfaceDataset(Dataset):
     def __len__(self):
         return len(self.images)
 
-def display(img):
-    plt.imshow(img[:, :, 0])
-    plt.set_cmap('gray')
-    plt.show()
+
+
 
 
 # Set the root directory of the UTKFace dataset
@@ -125,7 +128,7 @@ utkface_dataset = UTKFaceDataset(root_dir, transform=transform)
 utkface_loader = torch.utils.data.DataLoader(utkface_dataset, batch_size=4, shuffle=True, num_workers=2)
 
 fairfair_dataset = FairfaceDataset(root_dir_fair, transform=transform)
-fairface_loader = torch.utils.data.DataLoader(fairfair_dataset, batch_size= 4, shuffle=True, num_workers=2)
+fairface_loader = torch.utils.data.DataLoader(fairfair_dataset, batch_size= 4, num_workers=2)
 
 
 class Net(nn.Module):
@@ -137,7 +140,7 @@ class Net(nn.Module):
         self.conv2 = nn.Conv2d(6, 16, 5)
         self.fc1 = nn.Linear(16 * 5 * 5, 120)
         self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 5)  # UTKFace dataset has 2 classes: male and female, 5 race classes, a lot of age classes
+        self.fc3 = nn.Linear(84, 2)  # UTKFace dataset has 2 classes: male and female, 5 race classes, a lot of age classes
 
     # defines forward pass and returns an output
     def forward(self, x):
@@ -156,8 +159,11 @@ class Net(nn.Module):
 # testset = ImageFolder(root='C:/Users/aashr/OneDrive/Documents/Research Projects/EmoryREU/UTKFace.tar/UTKFace/UTKFace', transform=transform)
 # testloader = DataLoader(testset, batch_size=4, shuffle=False, num_workers=2)
 
-#classes = ('male', 'female')
-classes = ('White', 'Black', 'Asian', 'Indian', 'Other')
+classes = ('male', 'female')
+#classes = ('White', 'Black', 'Asian', 'Indian', 'Other')
+
+
+
 
 correct_pred = {classname: 0 for classname in classes}
 total_pred = {classname: 0 for classname in classes}
@@ -173,10 +179,13 @@ graph_lossE2, step_pointE2 = [], []
 graph_lossE3, step_pointE3 = [], []
 
 fairg, fairr = [], []
-
+image_list = []
+sample_dict = {}
+header_label = []
 # Train
 if __name__ == '__main__':
-    for epoch in range(1):
+
+    for epoch in range(3):
         running_loss = 0.0
         for i, data in enumerate(utkface_loader, 0):
             inputs, labels = data
@@ -209,7 +218,7 @@ if __name__ == '__main__':
     # Test the network on the test data
     correct = 0
     total = 0
-    newtotal = 0
+    oodtotal = 0
     with torch.no_grad():
         for data in utkface_loader:
             images, labels = data
@@ -228,11 +237,16 @@ if __name__ == '__main__':
             images = data
             outputs = net(images)
             predicted = torch.max(outputs.data)
-            newtotal += 1
-            fairr.append(predicted)
-            sample = images[newtotal]
-            print('Race:', int(predicted))
-            display(sample)
+            oodtotal += 1
+            image_list.append({"Gender": int(predicted)})
+
+        with open("fairface_labels.csv", "w", newline="") as csvfile:
+            fieldnames = ["Gender"]
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+            writer.writeheader()
+            for row in image_list:
+                writer.writerow(row)
 
     print(total_pred)
     print(correct_pred)
@@ -260,7 +274,6 @@ if __name__ == '__main__':
     plt.title("Loss vs Number of iteration")
     plt.legend()
     plt.show()
-
 
 
 #    correct_pred = 0
