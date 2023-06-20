@@ -76,7 +76,7 @@ class UTKFaceDataset(Dataset):
         return len(self.images)
 
 class FairfaceDataset(Dataset):
-    # Initializes dataset by setting root directory and transformation
+        # Initializes dataset by setting root directory and transformation
     def __init__(self, root, transform=None):
         self.root = root
         self.transform = transform
@@ -92,6 +92,16 @@ class FairfaceDataset(Dataset):
                 images.append(image_path)
         return images
 
+    def get_class_label(self, filename):
+        # Extract the age, gender, and race from the filename
+        age, gender, race = filename.split('_')[:3]
+        # Assign class label based on gender (0 for male, 1 for female)
+        # class_label = 0 if int(gender) == 0 else 1
+        class_label = int(gender)  # just change this to age, gender, or race
+        # class_label = int(age)
+
+        return class_label
+
     # Indexes dataset and applies transformation and returns image and tuple
     def __getitem__(self, index):
         image_path = self.images[index]
@@ -100,20 +110,19 @@ class FairfaceDataset(Dataset):
         if self.transform is not None:
             image = self.transform(image)
 
-        return image
+        class_label = self.get_class_label(os.path.basename(image_path))
+
+        return image, class_label
 
     # returns total number of images
     def __len__(self):
         return len(self.images)
 
 
-
-
-
 # Set the root directory of the UTKFace dataset
 root_dir = 'C:/Users/lucab/Downloads/UTKFace'
 root_dir_fair = 'C:/Users/lucab/Downloads/fairface-img-margin025-trainval/train'
-
+csv_root_dir = 'C:/Users/lucab/Downloads/fairface-img-margin025-trainval/train/fairface_label_train.csv'
 # Defines transformation pipeline by resizing, converting to tensors, and normalizing
 transform = transforms.Compose([
     transforms.Resize((32, 32)),
@@ -135,20 +144,20 @@ class Net(nn.Module):
     # Initializes layers of network by defining convolutional layers, max-pooling layers, and fully connected layers with appropriate and output sizes
     def __init__(self):
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(3, 6, 5)
+        self.conv1 = nn.Conv2d(3, 32, 5)
         self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(6, 16, 5)
-        self.fc1 = nn.Linear(16 * 5 * 5, 120)
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 2)  # UTKFace dataset has 2 classes: male and female, 5 race classes, a lot of age classes
+        self.conv2 = nn.Conv2d(32, 128, 5)
+        self.fc1 = nn.Linear(128 * 5 * 5, 120)
+        self.fc2 = nn.Linear(120, 30)
+        self.fc3 = nn.Linear(30, 5)  # UTKFace dataset has 2 classes: male and female, 5 race classes, a lot of age classes
 
     # defines forward pass and returns an output
     def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = x.view(-1, 16 * 5 * 5)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
+        x = self.pool(F.elu(self.conv1(x)))
+        x = self.pool(F.elu(self.conv2(x)))
+        x = x.view(-1, 128 * 5 * 5)
+        x = F.elu(self.fc1(x))
+        x = F.elu(self.fc2(x))
         x = self.fc3(x)
         return x
 
@@ -172,7 +181,7 @@ net = Net()
 
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+optimizer = optim.Adam(net.parameters(), lr=0.001, betas=(0.5, 0.9), amsgrad=True)
 graph_lossE1 = []
 step_pointE1 = []
 graph_lossE2, step_pointE2 = [], []
@@ -185,7 +194,7 @@ header_label = []
 # Train
 if __name__ == '__main__':
 
-    for epoch in range(3):
+    for epoch in range(5):
         running_loss = 0.0
         for i, data in enumerate(utkface_loader, 0):
             inputs, labels = data
@@ -203,11 +212,11 @@ if __name__ == '__main__':
                     graph_lossE1.append(running_loss / 200)
                     step_pointE1.append(i)
 
-                if epoch == 1:
+                if epoch == 2:
                     graph_lossE2.append(running_loss / 200)
                     step_pointE2.append(i)
 
-                if epoch == 2:
+                if epoch == 4:
                     graph_lossE3.append(running_loss / 200)
                     step_pointE3.append(i)
                 running_loss = 0.0
@@ -215,12 +224,29 @@ if __name__ == '__main__':
     print('Finished Training')
     truth = torch.tensor([])
     pred = torch.tensor([])
+    oodtruth = torch.tensor([])
+    oodpred = torch.tensor([])
     # Test the network on the test data
     correct = 0
     total = 0
-    oodtotal = 0
+    oodcorrect, oodtotal = 0, 0
     with torch.no_grad():
-        for data in utkface_loader:
+#       for data in utkface_loader:
+#            images, labels = data
+#            outputs = net(images)
+#            _, predicted = torch.max(outputs.data, 1)
+#            total += labels.size(0)
+#            correct += (predicted == labels).sum().item()
+#            truth = torch.cat((truth, labels), 0)
+#            pred = torch.cat((pred, predicted), 0)
+
+#            for label, prediction in zip(labels, predicted):
+#                if label == prediction:
+#                    correct_pred[classes[label]] += 1
+#                total_pred[classes[label]] += 1
+#        print('Finished Testing on UTKFace!')
+
+        for data in fairface_loader:
             images, labels = data
             outputs = net(images)
             _, predicted = torch.max(outputs.data, 1)
@@ -233,23 +259,12 @@ if __name__ == '__main__':
                 if label == prediction:
                     correct_pred[classes[label]] += 1
                 total_pred[classes[label]] += 1
-        for data in fairface_loader:
-            images = data
-            outputs = net(images)
-            predicted = torch.max(outputs.data)
-            oodtotal += 1
-            image_list.append({"Gender": int(predicted)})
+        print('Finished Testing on Fairface!')
 
-        with open("fairface_labels.csv", "w", newline="") as csvfile:
-            fieldnames = ["Gender"]
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
-            writer.writeheader()
-            for row in image_list:
-                writer.writerow(row)
 
     print(total_pred)
     print(correct_pred)
+
 
     # print accuracy for each class
     plt.figure()
