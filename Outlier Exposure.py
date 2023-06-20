@@ -29,6 +29,7 @@ from sklearn.metrics import roc_auc_score
 from sklearn.metrics import accuracy_score, confusion_matrix, roc_auc_score, roc_curve, balanced_accuracy_score, RocCurveDisplay
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
+import argparse
 
 
 # Defining a dataset class
@@ -149,6 +150,7 @@ class Net(nn.Module):
         self.conv2 = nn.Conv2d(32, 128, 5)
         self.fc1 = nn.Linear(128 * 5 * 5, 120)
         self.fc2 = nn.Linear(120, 30)
+        self.dp = nn.Dropout(0.5)
         self.fc3 = nn.Linear(30, 5)  # UTKFace dataset has 2 classes: male and female, 5 race classes, a lot of age classes
 
     # defines forward pass and returns an output
@@ -158,6 +160,7 @@ class Net(nn.Module):
         x = x.view(-1, 128 * 5 * 5)
         x = F.elu(self.fc1(x))
         x = F.elu(self.fc2(x))
+        x = self.dp(x)
         x = self.fc3(x)
         return x
 
@@ -170,7 +173,6 @@ class Net(nn.Module):
 
 #classes = ('male', 'female')
 classes = ('White', 'Black', 'Asian', 'Indian', 'Other')
-
 
 
 
@@ -187,40 +189,81 @@ step_pointE1 = []
 graph_lossE2, step_pointE2 = [], []
 graph_lossE3, step_pointE3 = [], []
 
-
 fairg, fairr = [], []
 image_list = []
 sample_dict = {}
 header_label = []
 # Train
-if __name__ == '__main__':
+def cosine_annealing(step, total_steps, lr_max, lr_min):
+    return lr_min + (lr_max - lr_min) * 0.5 * (
+            1 + np.cos(step / total_steps * np.pi))
 
+
+if __name__ == '__main__':
+    loss_avg = 0.0
+    running_loss = 0.0
+    i = 0
     for epoch in range(5):
-        running_loss = 0.0
-        for i, data in enumerate(utkface_loader, 0):
-            inputs, labels = data
+        for in_set, out_set in zip(utkface_loader, fairface_loader):
+            data = torch.cat((in_set[0], out_set[0]), 0)
+            target = in_set[1]
+            outputs = net(data)
+
             optimizer.zero_grad()
-            outputs = net(inputs)
-            loss = criterion(outputs, labels)
+            loss = F.cross_entropy(outputs[:len(in_set[0])], target)
+            loss += 0.5 * -(outputs[len(in_set[0]):].mean(1) - torch.logsumexp(outputs[len(in_set[0]):], dim=1)).mean()
             loss.backward()
             optimizer.step()
-
+            i += 1
             running_loss += loss.item()
+            # cross-entropy from softmax distribution to uniform distribution
+
+            # exponential moving average
+            loss_avg = loss_avg * 0.8 + float(loss) * 0.2
 
             if i % 200 == 199:
-                print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 200))
+                print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, loss_avg / 200))
                 if epoch == 0:
-                    graph_lossE1.append(running_loss / 200)
+                    graph_lossE1.append(loss_avg / 200)
                     step_pointE1.append(i)
 
                 if epoch == 2:
-                    graph_lossE2.append(running_loss / 200)
+                    graph_lossE2.append(loss_avg / 200)
                     step_pointE2.append(i)
 
                 if epoch == 4:
-                    graph_lossE3.append(running_loss / 200)
+                    graph_lossE3.append(loss_avg / 200)
                     step_pointE3.append(i)
-                running_loss = 0.0
+                loss_avg = 0.0
+
+
+
+#    for epoch in range(5):
+#        running_loss = 0.0
+#        for i, data in enumerate(utkface_loader, 0):
+#            inputs, labels = data
+#            optimizer.zero_grad()
+#            outputs = net(inputs)
+#            loss = criterion(outputs, labels)
+#            loss.backward()
+#            optimizer.step()
+#
+#            running_loss += loss.item()
+#
+#            if i % 200 == 199:
+#                print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 200))
+#                if epoch == 0:
+#                    graph_lossE1.append(running_loss / 200)
+#                    step_pointE1.append(i)
+#
+#                if epoch == 2:
+#                    graph_lossE2.append(running_loss / 200)
+#                    step_pointE2.append(i)
+#
+#                if epoch == 4:
+#                    graph_lossE3.append(running_loss / 200)
+#                    step_pointE3.append(i)
+#                running_loss = 0.0
 
     print('Finished Training')
     truth = torch.tensor([])

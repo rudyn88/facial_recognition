@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="5a875f85-9ca1-492b-9e20-e1f6f30d3f36" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/FairFace Loader.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Outlier Exposure.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Mixed Datasets.py" beforeDir="false" afterPath="$PROJECT_DIR$/Mixed Datasets.py" afterDir="false" />
     </list>
