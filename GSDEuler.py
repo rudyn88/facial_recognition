@@ -14,9 +14,9 @@ from imblearn.over_sampling import RandomOverSampler
 import requests
 from io import BytesIO
 import zipfile
+import gzip
+import shutil
 
-
-# Program Goal: Find the optimal settings for GSD using grid search without requiring a local directory --> Ideal for euler/zuber computation
 # Define the URL to the UTKFace dataset zip file
 dataset_url = 'https://drive.google.com/uc?export=download&id=0BxYys69jI14kYVM3aVhKS1VhRUk'
 
