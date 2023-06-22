@@ -6,4 +6,4 @@
 
 cd /local/scratch/NETID/DIRECTORY   
 source venv/bin/activate
-python train.py
+python GSDOptimizer.py
