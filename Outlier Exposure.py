@@ -28,12 +28,16 @@ from sklearn.model_selection import train_test_split
 from matplotlib.legend_handler import HandlerBase
 import matplotlib.patches as mpatches
 import torch.nn.functional as F
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, classification_report
 from sklearn.metrics import accuracy_score, confusion_matrix, roc_auc_score, roc_curve, balanced_accuracy_score, RocCurveDisplay
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
 import argparse
 
+
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+os.environ["CUDA_LAUNCH_BLOCKING"]="1"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Defining a dataset class
 class UTKFaceDataset(Dataset):
@@ -128,6 +132,7 @@ root_dir = 'C:/Users/lucab/Downloads/UTKFace'
 root_dir_fair = 'C:/Users/lucab/Downloads/fairface-img-margin025-trainval/train'
 csv_root_dir = 'C:/Users/lucab/Downloads/fairface-img-margin025-trainval/train/fairface_label_train.csv'
 root_dir_oe = 'C:/Users/lucab/Downloads/OutliersCompiled/outliers'
+root_dir_oe_utk = 'C:/Users/lucab/Downloads/UTKOutliers/UTKOutliers'
 # Defines transformation pipeline by resizing, converting to tensors, and normalizing
 transform = transforms.Compose([
     transforms.Resize((32, 32)),
@@ -142,9 +147,18 @@ utkface_dataset = UTKFaceDataset(root_dir, transform=transform)
 utkface_loader = torch.utils.data.DataLoader(utkface_dataset, batch_size=4, shuffle=True, num_workers=2)
 
 fairfair_dataset = FairfaceDataset(root_dir_fair, transform=transform)
-fairface_loader = torch.utils.data.DataLoader(fairfair_dataset, batch_size= 4, shuffle=False, num_workers=2)
+fairface_loader = torch.utils.data.DataLoader(fairfair_dataset, batch_size= 4, shuffle=True, num_workers=2)
+
 fairface_outlier_dataset = FairfaceDataset(root_dir_oe, transform=transform)
-fairface_outlier_loader = torch.utils.data.DataLoader(fairface_outlier_dataset, batch_size=4, shuffle=False, num_workers=2)
+fairface_outlier_loader = torch.utils.data.DataLoader(fairface_outlier_dataset, batch_size=4, shuffle=True, num_workers=2)
+
+utkface_outlier_dataset = FairfaceDataset(root_dir_oe_utk, transform=transform)
+utkface_outlier_loader = torch.utils.data.DataLoader(utkface_outlier_dataset, batch_size=4, shuffle=True, num_workers=2)
+
+#oodset = torchvision.datasets.CIFAR10(root='./data', train=True,
+#                                        download=True, transform=transform)
+#oodloader = torch.utils.data.DataLoader(oodset, batch_size=4,
+#                                          shuffle=True, num_workers=2)
 
 class Net(nn.Module):
     # Initializes layers of network by defining convolutional layers, max-pooling layers, and fully connected layers with appropriate and output sizes
@@ -182,7 +196,7 @@ classes = ('male', 'female')
 
 correct_pred = {classname: 0 for classname in classes}
 total_pred = {classname: 0 for classname in classes}
-net = Net()
+net = Net().to(device)
 
 
 
@@ -192,27 +206,26 @@ graph_lossE1 = []
 step_pointE1 = []
 graph_lossE2, step_pointE2 = [], []
 graph_lossE3, step_pointE3 = [], []
-scheduler = MultiStepLR(optimizer, milestones=[10, 20], gamma=0.1)
 
-fairg, fairr = [], []
 image_list = []
 sample_dict = {}
 header_label = []
 # Train
 
-#beta = 0.5
 
-beta_max = 0.5
+beta_max = 0.6
 def beta_step(epoch):
-    return (beta_max) * 0.5 * (1 - np.cos(epoch / 15 * np.pi))
+    return (beta_max) * 0.5 * (1 - np.cos((epoch+1) / 15 * np.pi))
 
 if __name__ == '__main__':
+    print(device)
     loss_avg = 0.0
     running_loss = 0.0
     i = 0
-#    fairface_loader.dataset.offset = np.random.randint(len(fairface_loader.dataset))
+
+
     for epoch in range(15):
-        for in_set, out_set in zip(utkface_loader, fairface_outlier_loader):
+        for in_set, out_set in zip(utkface_loader, fairface_loader):
             data = torch.cat((in_set[0], out_set[0]), 0)
             target = in_set[1]
             outputs = net(data)
@@ -247,8 +260,6 @@ if __name__ == '__main__':
         i = 0
 
 
-
-
     print('Finished Training')
     truth = torch.tensor([])
     pred = torch.tensor([])
@@ -256,11 +267,13 @@ if __name__ == '__main__':
     # Test the network on the test data
     correct = 0
     total = 0
+    ROCPrediction = torch.tensor([])
     with torch.no_grad():
 
         for data in fairface_loader:
             images, labels = data
             outputs = net(images)
+            ROCPrediction = torch.cat((ROCPrediction, F.softmax(outputs)[:,1]), 0)
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
@@ -310,7 +323,7 @@ if __name__ == '__main__':
 #        accuracy = 100 * float(correct_count) / total_pred[classname]
 #        print(f'Accuracy for class: {classname:5s} is {accuracy:.1f} %')
 
-    RocCurveDisplay.from_predictions(truth, pred, color="darkorange")
+    RocCurveDisplay.from_predictions(truth, ROCPrediction, color="darkorange")
     plt.plot([0, 1], [0, 1], "k--", label="chance level (AUC = 0.5)")
     plt.axis("square")
     plt.xlabel("False Positive Rate")
@@ -320,9 +333,8 @@ if __name__ == '__main__':
     plt.show()
 
     confusion_matrix = metrics.confusion_matrix(truth, pred)
-
-    cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix=confusion_matrix, display_labels=[False, True])
-
+#    print(classification_report(truth, pred, labels=classes))
+    cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix=confusion_matrix, display_labels=['Male', 'Female'])
     cm_display.plot()
     plt.show()
 
