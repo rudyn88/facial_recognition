@@ -2,9 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="5a875f85-9ca1-492b-9e20-e1f6f30d3f36" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/Outlier Exposure.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/facial_recognition.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/facial_recognition.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Mixed Datasets.py" beforeDir="false" afterPath="$PROJECT_DIR$/Mixed Datasets.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Outlier Exposure.py" beforeDir="false" afterPath="$PROJECT_DIR$/Outlier Exposure.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -20,6 +20,14 @@
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GithubPullRequestsUISettings">
+    <option name="selectedUrlAndAccountId">
+      <UrlAndAccount>
+        <option name="accountId" value="5b12dbf6-a5cb-4507-a198-01ce5d48ab5f" />
+        <option name="url" value="https://github.com/rudyn88/facial_recognition.git" />
+      </UrlAndAccount>
+    </option>
   </component>
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$PROJECT_DIR$/Mixed Datasets.py" root0="SKIP_INSPECTION" />
