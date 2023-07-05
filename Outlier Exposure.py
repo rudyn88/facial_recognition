@@ -74,7 +74,7 @@ class FairfaceDataset(Dataset):
     def __init__(self, root, transform=None):
         self.root = root
         self.transform = transform
-        self.images = self.load_images()
+        self.images = self.load_images()[:num_images]
 
     # reads images files from root directory and reutnrs list of image paths where the file ends with .jpg or .png
     def load_images(self):
@@ -85,6 +85,32 @@ class FairfaceDataset(Dataset):
                 image_path = os.path.join(self.root, filename)
                 images.append(image_path)
         return images
+
+    def get_class_label(self, filename):
+        # Extract the age, gender, and race from the filename
+        age, gender, race = filename.split('_')[:3]
+        # Assign class label based on gender (0 for male, 1 for female)
+        # class_label = 0 if int(gender) == 0 else 1
+        class_label = int(race)  # just change this to age, gender, or race
+        # class_label = int(age)
+
+        return class_label
+
+    # Indexes dataset and applies transformation and returns image and tuple
+    def __getitem__(self, index):
+        image_path = self.images[index]
+        image = Image.open(image_path).convert('RGB')
+
+        if self.transform is not None:
+            image = self.transform(image)
+
+        class_label = self.get_class_label(os.path.basename(image_path))
+
+        return image, class_label
+
+    # returns total number of images
+    def __len__(self):
+        return len(self.images)
 
     def get_class_label(self, filename):
         # Extract the age, gender, and race from the filename
@@ -341,8 +367,7 @@ def save_fid_stats(paths, batch_size, device, dims, num_workers=1):
 # root_dir_oe = 'C:/Users/lucab/Downloads/OutliersCompiled/outliers'
 
 root_dir = '/Users/rudy/Documents/Academic/Research/Facial_Recognition/Data_Sets/UTKFace'
-root_dir_fair = '/Users/rudy/Documents/Academic/Research/Facial_Recognition/Data_Sets/fairface-img-margin025-trainval' \
-                '/train '
+root_dir_fair = '/Users/rudy/Documents/Academic/Research/Facial_Recognition/Data_Sets/fairface-img-margin025-trainval/train'
 csv_root_dir = '/Users/rudy/Documents/Academic/Research/Facial_Recognition/Data_Sets/fairface_label_train.csv'
 root_dir_oe = '/Users/rudy/Documents/Academic/Research/Facial_Recognition/Data_Sets/outliers'
 
@@ -357,7 +382,10 @@ transform = transforms.Compose([
 utkface_dataset = UTKFaceDataset(root_dir, transform=transform)
 
 # Create a DataLoader for the UTKFace dataset
+UTKFace_max = 23706
+num_images = 2000#UTKFace_max
 utkface_loader = torch.utils.data.DataLoader(utkface_dataset, batch_size=4, shuffle=True, num_workers=2)
+
 
 fairfair_dataset = FairfaceDataset(root_dir_fair, transform=transform)
 fairface_loader = torch.utils.data.DataLoader(fairfair_dataset, batch_size=4, shuffle=False, num_workers=2)
@@ -431,7 +459,7 @@ if __name__ == '__main__':
     running_loss = 0.0
     i = 0
     #    fairface_loader.dataset.offset = np.random.randint(len(fairface_loader.dataset))
-    for epoch in range(15):
+    for epoch in range(5):
         for in_set, out_set in zip(utkface_loader, fairface_outlier_loader):
             data = torch.cat((in_set[0], out_set[0]), 0)
             target = in_set[1]
