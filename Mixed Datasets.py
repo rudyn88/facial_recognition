@@ -3,7 +3,6 @@ import csv
 import random
 
 from matplotlib import image as mpimg
-import cv2
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -25,6 +24,7 @@ from sklearn.model_selection import train_test_split
 from matplotlib.legend_handler import HandlerBase
 import matplotlib.patches as mpatches
 import torch.nn.functional as F
+from sklearn import metrics
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import accuracy_score, confusion_matrix, roc_auc_score, roc_curve, balanced_accuracy_score, RocCurveDisplay
 import matplotlib.patches as mpatches
@@ -54,7 +54,7 @@ class UTKFaceDataset(Dataset):
         age, gender, race = filename.split('_')[:3]
         # Assign class label based on gender (0 for male, 1 for female)
         #class_label = 0 if int(gender) == 0 else 1
-        class_label = int(race) #just change this to age, gender, or race
+        class_label = int(gender) #just change this to age, gender, or race
         #class_label = int(age)
 
         return class_label
@@ -97,7 +97,7 @@ class FairfaceDataset(Dataset):
         age, gender, race = filename.split('_')[:3]
         # Assign class label based on gender (0 for male, 1 for female)
         # class_label = 0 if int(gender) == 0 else 1
-        class_label = int(race)  # just change this to age, gender, or race
+        class_label = int(gender)  # just change this to age, gender, or race
         # class_label = int(age)
 
         return class_label
@@ -140,24 +140,25 @@ fairfair_dataset = FairfaceDataset(root_dir_fair, transform=transform)
 fairface_loader = torch.utils.data.DataLoader(fairfair_dataset, batch_size= 4, num_workers=2)
 
 
+
 class Net(nn.Module):
     # Initializes layers of network by defining convolutional layers, max-pooling layers, and fully connected layers with appropriate and output sizes
     def __init__(self):
         super(Net, self).__init__()
         self.conv1 = nn.Conv2d(3, 32, 5)
-        self.pool = nn.MaxPool2d(2, 2)
+        self.pool = nn.AvgPool2d(2, 2)
         self.conv2 = nn.Conv2d(32, 128, 5)
         self.fc1 = nn.Linear(128 * 5 * 5, 120)
         self.fc2 = nn.Linear(120, 30)
-        self.fc3 = nn.Linear(30, 5)  # UTKFace dataset has 2 classes: male and female, 5 race classes, a lot of age classes
+        self.fc3 = nn.Linear(30, 2)  # UTKFace dataset has 2 classes: male and female, 5 race classes, a lot of age classes
 
     # defines forward pass and returns an output
     def forward(self, x):
-        x = self.pool(F.elu(self.conv1(x)))
-        x = self.pool(F.elu(self.conv2(x)))
+        x = self.pool(F.tanh(self.conv1(x)))
+        x = self.pool(F.tanh(self.conv2(x)))
         x = x.view(-1, 128 * 5 * 5)
-        x = F.elu(self.fc1(x))
-        x = F.elu(self.fc2(x))
+        x = F.tanh(self.fc1(x))
+        x = F.tanh(self.fc2(x))
         x = self.fc3(x)
         return x
 
@@ -168,8 +169,8 @@ class Net(nn.Module):
 # testset = ImageFolder(root='C:/Users/aashr/OneDrive/Documents/Research Projects/EmoryREU/UTKFace.tar/UTKFace/UTKFace', transform=transform)
 # testloader = DataLoader(testset, batch_size=4, shuffle=False, num_workers=2)
 
-#classes = ('male', 'female')
-classes = ('White', 'Black', 'Asian', 'Indian', 'Other')
+classes = ('male', 'female')
+#classes = ('White', 'Black', 'Asian', 'Indian', 'Other')
 
 
 
@@ -195,7 +196,7 @@ header_label = []
 # Train
 if __name__ == '__main__':
 
-    for epoch in range(5):
+    for epoch in range(30):
         running_loss = 0.0
         for i, data in enumerate(utkface_loader, 0):
             inputs, labels = data
@@ -299,12 +300,17 @@ if __name__ == '__main__':
 #        accuracy = 100 * float(correct_count) / total_pred[classname]
 #        print(f'Accuracy for class: {classname:5s} is {accuracy:.1f} %')
 
-#    RocCurveDisplay.from_predictions(truth, pred, color="darkorange")
-#    plt.plot([0, 1], [0, 1], "k--", label="chance level (AUC = 0.5)")
-#    plt.axis("square")
-#    plt.xlabel("False Positive Rate")
-#    plt.ylabel("True Positive Rate")
-#    plt.title("ROC curve")
-#    plt.legend()
-#    plt.show()
+    RocCurveDisplay.from_predictions(truth, pred, color="darkorange")
+    plt.plot([0, 1], [0, 1], "k--", label="chance level (AUC = 0.5)")
+    plt.axis("square")
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    plt.title("ROC curve")
+    plt.legend()
+    plt.show()
 
+    confusion_matrix = metrics.confusion_matrix(truth, pred)
+
+    cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix=confusion_matrix, display_labels=['Male', 'Female'])
+    cm_display.plot()
+    plt.show()

@@ -20,6 +20,7 @@ from sklearn.model_selection import train_test_split
 from matplotlib.legend_handler import HandlerBase
 import matplotlib.patches as mpatches
 import torch.nn.functional as F
+from sklearn import metrics
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import accuracy_score, confusion_matrix, roc_auc_score, roc_curve, balanced_accuracy_score, RocCurveDisplay
 import matplotlib.patches as mpatches
@@ -49,7 +50,7 @@ class UTKFaceDataset(Dataset):
         age, gender, race = filename.split('_')[:3]
         # Assign class label based on gender (0 for male, 1 for female)
         #class_label = 0 if int(gender) == 0 else 1
-        class_label = int(race) #just change this to age, gender, or race
+        class_label = int(gender) #just change this to age, gender, or race
         #class_label = int(age)
 
         return class_label
@@ -95,7 +96,7 @@ class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
         self.conv1 = nn.Conv2d(3, 32, 5)
-        self.pool = nn.MaxPool2d(2, 2)
+        self.pool = nn.AvgPool2d(2, 2)
         self.conv2 = nn.Conv2d(32, 128, 5)
         self.fc1 = nn.Linear(128 * 5 * 5, 120)
         self.fc2 = nn.Linear(120, 30)
@@ -103,11 +104,11 @@ class Net(nn.Module):
 
     # defines forward pass and returns an output
     def forward(self, x):
-        x = self.pool(F.elu(self.conv1(x)))
-        x = self.pool(F.elu(self.conv2(x)))
+        x = self.pool(F.tanh(self.conv1(x)))
+        x = self.pool(F.tanh(self.conv2(x)))
         x = x.view(-1, 128 * 5 * 5)
-        x = F.elu(self.fc1(x))
-        x = F.elu(self.fc2(x))
+        x = F.tanh(self.fc1(x))
+        x = F.tanh(self.fc2(x))
         x = self.fc3(x)
         return x
 
@@ -118,8 +119,8 @@ class Net(nn.Module):
 # testset = ImageFolder(root='C:/Users/aashr/OneDrive/Documents/Research Projects/EmoryREU/UTKFace.tar/UTKFace/UTKFace', transform=transform)
 # testloader = DataLoader(testset, batch_size=4, shuffle=False, num_workers=2)
 
-#classes = ('male', 'female')
-classes = ('White', 'Black', 'Asian', 'Indian', 'Other')
+classes = ('male', 'female')
+#classes = ('White', 'Black', 'Asian', 'Indian', 'Other')
 
 correct_pred = {classname: 0 for classname in classes}
 total_pred = {classname: 0 for classname in classes}
@@ -135,7 +136,7 @@ graph_lossE3, step_pointE3 = [], []
 
 # Train
 if __name__ == '__main__':
-    for epoch in range(10):
+    for epoch in range(15):
         running_loss = 0.0
         for i, data in enumerate(utkface_loader, 0):
             inputs, labels = data
@@ -224,4 +225,9 @@ if __name__ == '__main__':
 #    plt.title("ROC curve")
 #    plt.legend()
 #    plt.show()
+    confusion_matrix = metrics.confusion_matrix(truth, pred)
+
+    cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix=confusion_matrix, display_labels=['Male', 'Female'])
+    cm_display.plot()
+    plt.show()
 

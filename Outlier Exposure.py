@@ -1,7 +1,7 @@
 # importing all packages that may be needed
 import csv
 import random
-
+from KL_Distribution import calculate_kl_divergence
 from matplotlib import image as mpimg
 import cv2
 import pandas as pd
@@ -20,7 +20,7 @@ from torch.optim import lr_scheduler
 from torch.optim.lr_scheduler import ExponentialLR, MultiStepLR, CosineAnnealingLR
 from torchvision.datasets import ImageFolder
 import numpy as np
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader, TensorDataset, WeightedRandomSampler
 from torch.utils.data import Dataset
 import matplotlib.pyplot as plt
 from sklearn.datasets import make_blobs
@@ -147,7 +147,7 @@ utkface_dataset = UTKFaceDataset(root_dir, transform=transform)
 utkface_loader = torch.utils.data.DataLoader(utkface_dataset, batch_size=4, shuffle=True, num_workers=2)
 
 fairfair_dataset = FairfaceDataset(root_dir_fair, transform=transform)
-fairface_loader = torch.utils.data.DataLoader(fairfair_dataset, batch_size= 4, shuffle=True, num_workers=2)
+fairface_loader = torch.utils.data.DataLoader(fairfair_dataset, batch_size= 4, num_workers=2, shuffle=True)
 
 fairface_outlier_dataset = FairfaceDataset(root_dir_oe, transform=transform)
 fairface_outlier_loader = torch.utils.data.DataLoader(fairface_outlier_dataset, batch_size=4, shuffle=True, num_workers=2)
@@ -198,9 +198,9 @@ correct_pred = {classname: 0 for classname in classes}
 total_pred = {classname: 0 for classname in classes}
 net = Net().to(device)
 
+weights = torch.tensor([1.5, 1])
 
-
-criterion = nn.CrossEntropyLoss()
+criterion = nn.CrossEntropyLoss(weight=weights)
 optimizer = optim.Adam(net.parameters(), lr=0.001, betas=(0.5, 0.9), amsgrad=True)
 graph_lossE1 = []
 step_pointE1 = []
@@ -215,7 +215,8 @@ header_label = []
 
 beta_max = 0.6
 def beta_step(epoch):
-    return (beta_max) * 0.5 * (1 - np.cos((epoch+1) / 15 * np.pi))
+    return (beta_max) * (beta_max) * (1 - np.cos(epoch / 15 * np.pi))
+
 
 if __name__ == '__main__':
     print(device)
@@ -225,11 +226,12 @@ if __name__ == '__main__':
 
 
     for epoch in range(15):
-        for in_set, out_set in zip(utkface_loader, fairface_loader):
+        for in_set, out_set in zip(fairface_loader, utkface_outlier_loader):
             data = torch.cat((in_set[0], out_set[0]), 0)
             target = in_set[1]
             outputs = net(data)
             optimizer.zero_grad()
+#            beta = calculate_kl_divergence(fairface_loader, utkface_outlier_loader)
             beta = beta_step(epoch)
             loss = F.cross_entropy(outputs[:len(in_set[0])], target)
             loss += beta * -(outputs[len(in_set[0]):].mean(1) - torch.logsumexp(outputs[len(in_set[0]):], dim=1)).mean()
@@ -270,7 +272,7 @@ if __name__ == '__main__':
     ROCPrediction = torch.tensor([])
     with torch.no_grad():
 
-        for data in fairface_loader:
+        for data in utkface_loader:
             images, labels = data
             outputs = net(images)
             ROCPrediction = torch.cat((ROCPrediction, F.softmax(outputs)[:,1]), 0)
@@ -284,7 +286,7 @@ if __name__ == '__main__':
                 if label == prediction:
                     correct_pred[classes[label]] += 1
                 total_pred[classes[label]] += 1
-        print('Finished Testing on Fairface!')
+        print('Finished Testing')
 
 
     print(total_pred)

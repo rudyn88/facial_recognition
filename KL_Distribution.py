@@ -6,6 +6,9 @@ import shutil
 import csv
 import matplotlib.pyplot as plt
 
+def calculate_fisher_divergence(p, q):
+    print('hello world')
+
 def calculate_kl_divergence(p, q):
     p_sum = np.sum(p)
     q_sum = np.sum(q)
@@ -24,7 +27,7 @@ def calculate_kl_divergence(p, q):
         p_normalized = np.concatenate((p_normalized, np.zeros(len(q_normalized) - len(p_normalized))))
     elif len(p_normalized) > len(q_normalized):
         q_normalized = np.concatenate((q_normalized, np.zeros(len(p_normalized) - len(q_normalized))))
-
+    print(entropy(p_normalized, q_normalized))
     return entropy(p_normalized, q_normalized)
 
 def calculate_image_distribution(dataset_path):
@@ -45,10 +48,10 @@ def calculate_image_distribution(dataset_path):
     return pixel_distribution / (num_images * np.sum(pixel_distribution))
 
 # Original dataset path
-original_dataset_path = 'C:/Users/aashr/OneDrive/Documents/Research Projects/EmoryREU/UTKFace.tar/UTKFace/UTKFace'
+original_dataset_path = 'C:/Users/lucab/Downloads/UTKFace'
 
 # New dataset path
-new_dataset_path =  'C:/Users/aashr/OneDrive/Documents/Research Projects/EmoryREU/train'
+new_dataset_path = 'C:/Users/lucab/Downloads/fairface-img-margin025-trainval/train'
 
 # Threshold to determine outliers
 threshold = 0.1
@@ -80,7 +83,7 @@ print("KL Divergence (New -> Original):", kl_divergence_flipped)
 
 # Sort the images by their KL divergence in descending order
 
-"""
+
 image_scores = []
 image_files = os.listdir(new_dataset_path)
 
@@ -94,7 +97,7 @@ for image_file in image_files:
     image_scores.append((image_file, kl_divergence))
 
 image_scores.sort(key=lambda x: x[1], reverse=True)
-
+"""
 # Find the largest 20% of outliers
 num_outliers = int(len(image_scores) * 0.2)
 largest_outliers = image_scores[:num_outliers]
