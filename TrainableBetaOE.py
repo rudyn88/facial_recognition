@@ -222,6 +222,43 @@ def calculate_kl_divergence(p, q):
 
     return np.sum(p_normalized * np.log(p_normalized/q_normalized))
 
+def calculate_kl_divergence_fullset(p, q):
+    p_sum = np.sum(p)
+    q_sum = np.sum(q)
+
+    if p_sum != 0:
+        p_normalized = p / p_sum
+    else:
+        p_normalized = np.ones_like(p)  # Assign default value of 1 if sum is zero
+
+    if q_sum != 0:
+        q_normalized = q / q_sum
+    else:
+        q_normalized = np.ones_like(q)  # Assign default value of 1 if sum is zero
+
+    if len(p_normalized) < len(q_normalized):
+        p_normalized = np.concatenate((p_normalized, np.zeros(len(q_normalized) - len(p_normalized))))
+    elif len(p_normalized) > len(q_normalized):
+        q_normalized = np.concatenate((q_normalized, np.zeros(len(p_normalized) - len(q_normalized))))
+    print(entropy(p_normalized, q_normalized))
+    return entropy(p_normalized, q_normalized)
+
+def calculate_image_distribution_fullset(dataset_path):
+    image_files = os.listdir(dataset_path)
+    num_images = len(image_files)
+
+    # Initialize an array to store the pixel distributions
+    pixel_distribution = np.zeros((256,))
+
+    for image_file in image_files:
+        image_path = os.path.join(dataset_path, image_file)
+        image = Image.open(image_path)
+        pixels = np.array(image)
+        # Flatten the image and calculate the histogram
+        pixel_values, counts = np.unique(pixels.flatten(), return_counts=True)
+        pixel_distribution[pixel_values] += counts
+
+    return pixel_distribution / (num_images * np.sum(pixel_distribution))
 
 
 
@@ -240,7 +277,7 @@ correct_pred = {classname: 0 for classname in classes}
 total_pred = {classname: 0 for classname in classes}
 net = Net().to(device)
 
-weights = torch.tensor([1,5, 1])
+weights = torch.tensor([1.5, 1])
 
 criterion = nn.CrossEntropyLoss(weight=weights)
 optimizer = optim.Adam(net.parameters(), lr=0.001, betas=(0.5, 0.9), amsgrad=True)
@@ -257,9 +294,8 @@ inset = torch.tensor([])
 distpath = torch.tensor([])
 
 def beta_step(epoch, beta):
-    beta = 1/(1 + np.exp(-beta))
-#    beta_max = 1/10 * beta
-    return beta
+    beta_max = 1/(1 + np.exp(-beta))
+    return (beta_max) * (1 - np.cos((epoch + 1) / 15 * np.pi))
 
 # Different (linear or mlp) NN for estimating beta, with inputs as distance betweens distribution
 if __name__ == '__main__':
@@ -268,9 +304,9 @@ if __name__ == '__main__':
     loss_avg = 0.0
     running_loss = 0.0
     i = 0
-#    utkdist = calculate_image_distribution1(root_dir)
-#    fairdist = calculate_image_distribution1(root_dir_oe)
-#    beta_max = calculate_kl_divergence1(utkdist, fairdist)
+#    utkdist = calculate_image_distribution_fullset(root_dir)
+#    fairdist = calculate_image_distribution_fullset(root_dir_oe)
+#    beta_max = calculate_kl_divergence_fullset(utkdist, fairdist)
     for epoch in range(15):
         for in_set, out_set in zip(utkface_loader, fairface_outlier_loader):
             data = torch.cat((in_set[0], out_set[0]), 0)
@@ -288,22 +324,20 @@ if __name__ == '__main__':
             optimizer.step()
             i += 1
             running_loss += loss.item()
-            # cross-entropy from softmax distribution to uniform distribution
-            # exponential moving average
             loss_avg = loss_avg * 0.8 + float(loss) * 0.2
 
             if i % 200 == 199:
-                print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, loss_avg / 200))
+                print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, loss_avg))
                 if epoch == 0:
-                    graph_lossE1.append(loss_avg / 200)
+                    graph_lossE1.append(loss_avg)
                     step_pointE1.append(i)
 
                 if epoch == 2:
-                    graph_lossE2.append(loss_avg / 200)
+                    graph_lossE2.append(loss_avg)
                     step_pointE2.append(i)
 
                 if epoch == 4:
-                    graph_lossE3.append(loss_avg / 200)
+                    graph_lossE3.append(loss_avg)
                     step_pointE3.append(i)
                 loss_avg = 0.0
         print('Time since last epoch: %.2f' % (time.time() - initialT))
