@@ -5,8 +5,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5a875f85-9ca1-492b-9e20-e1f6f30d3f36" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Outlier Exposure.py" beforeDir="false" afterPath="$PROJECT_DIR$/Outlier Exposure.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/GSDEuler.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/GSDGender.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/GSDOptimizer.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ImageNorms.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Mixed Datasets.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/TrainingModel_for_UTKFace.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/TrainingModel_withGraph.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/UTKFaceGSD.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/UTKFace_Optimizing.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/wide_resnet.py" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -22,9 +30,6 @@
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
-  </component>
-  <component name="HighlightingSettingsPerFile">
-    <setting file="file://$PROJECT_DIR$/Mixed Datasets.py" root0="SKIP_INSPECTION" />
   </component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
