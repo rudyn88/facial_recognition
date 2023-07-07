@@ -154,10 +154,10 @@ fairface_outlier_loader = torch.utils.data.DataLoader(fairface_outlier_dataset, 
 utkface_outlier_dataset = FairfaceDataset(root_dir_oe_utk, transform=transform)
 utkface_outlier_loader = torch.utils.data.DataLoader(utkface_outlier_dataset, batch_size=16, shuffle=True, num_workers=2)
 
-#oodset = torchvision.datasets.CIFAR10(root='./data', train=True,
-#                                        download=True, transform=transform)
-#oodloader = torch.utils.data.DataLoader(oodset, batch_size=4,
-#                                          shuffle=True, num_workers=2)
+oodset = torchvision.datasets.CIFAR10(root='./data', train=True, download=False, transform=transform)
+
+oodloader = torch.utils.data.DataLoader(oodset, batch_size=16, shuffle=True, num_workers=2)
+
 
 class Net(nn.Module):
     # Initializes layers of network by defining convolutional layers, max-pooling layers, and fully connected layers with appropriate and output sizes
@@ -178,6 +178,14 @@ class Net(nn.Module):
         x = F.tanh(self.fc1(x))
         x = F.tanh(self.fc2(x))
         x = self.fc3(x)
+        return x
+
+class BetaNet(nn.Module):
+    def __init__(self):
+        super(BetaNet, self).__init__()
+        self.fc = nn.Linear(10, 10)
+    def forward(self, x):
+        x = self.fc(x)
         return x
 
 def calculate_image_distribution(dataset_path):
@@ -276,8 +284,8 @@ classes = ('male', 'female')
 correct_pred = {classname: 0 for classname in classes}
 total_pred = {classname: 0 for classname in classes}
 net = Net().to(device)
+weights = torch.FloatTensor([0.75, 1.5])
 
-weights = torch.tensor([1.5, 1])
 
 criterion = nn.CrossEntropyLoss(weight=weights)
 optimizer = optim.Adam(net.parameters(), lr=0.001, betas=(0.5, 0.9), amsgrad=True)
@@ -286,15 +294,16 @@ step_pointE1 = []
 graph_lossE2, step_pointE2 = [], []
 graph_lossE3, step_pointE3 = [], []
 
+true_beta_graph = []
 image_list = []
 sample_dict = {}
 header_label = []
 beta_graph = []
 inset = torch.tensor([])
 distpath = torch.tensor([])
-
+true_beta = 0.52
 def beta_step(epoch, beta):
-    beta_max = 1/(1 + np.exp(-beta))
+    beta_max = np.tanh(beta)
     return (beta_max) * (1 - np.cos((epoch + 1) / 15 * np.pi))
 
 # Different (linear or mlp) NN for estimating beta, with inputs as distance betweens distribution
@@ -306,7 +315,7 @@ if __name__ == '__main__':
     i = 0
 #    utkdist = calculate_image_distribution_fullset(root_dir)
 #    fairdist = calculate_image_distribution_fullset(root_dir_oe)
-#    beta_max = calculate_kl_divergence_fullset(utkdist, fairdist)
+#    true_beta = calculate_kl_divergence_fullset(utkdist, fairdist)
     for epoch in range(15):
         for in_set, out_set in zip(utkface_loader, fairface_outlier_loader):
             data = torch.cat((in_set[0], out_set[0]), 0)
@@ -318,8 +327,8 @@ if __name__ == '__main__':
             optimizer.zero_grad()
             beta = beta_step(epoch, beta_max)
             beta_graph.append(beta)
-            loss = F.cross_entropy(outputs[:len(in_set[0])], target)
-            loss += beta * -(outputs[len(in_set[0]):].mean(1) - torch.logsumexp(outputs[len(in_set[0]):], dim=1)).mean()
+            loss = F.cross_entropy(outputs[:len(in_set[0])], target, weight=weights)
+            loss += true_beta * -(outputs[len(in_set[0]):].mean(1) - torch.logsumexp(outputs[len(in_set[0]):], dim=1)).mean()
             loss.backward()
             optimizer.step()
             i += 1
@@ -340,7 +349,12 @@ if __name__ == '__main__':
                     graph_lossE3.append(loss_avg)
                     step_pointE3.append(i)
                 loss_avg = 0.0
-        print('Time since last epoch: %.2f' % (time.time() - initialT))
+        true_beta = np.average(beta_graph)
+        true_beta_graph.append(true_beta)
+
+
+
+        print('Time since last epoch: %.2f' % (time.time() - initialT), 'seconds')
         initialT = time.time()
 #        scheduler.step()
         i = 0
@@ -401,9 +415,12 @@ if __name__ == '__main__':
     plt.legend()
     plt.show()
 
-    print(beta_graph)
+#    plt.figure
+#    plt.plot(beta_graph, label= 'Beta')
+#    plt.show()
+
     plt.figure
-    plt.plot(beta_graph, label= 'Beta')
+    plt.plot(true_beta_graph, label= 'Beta')
     plt.show()
 
 #    correct_pred = 0
@@ -427,5 +444,6 @@ if __name__ == '__main__':
     cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix=confusion_matrix, display_labels=['Male', 'Female'])
     cm_display.plot()
     plt.show()
+
 
 

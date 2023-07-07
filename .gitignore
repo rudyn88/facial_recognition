@@ -1,3 +1,14 @@
 
 .idea/workspace.xml
 .idea/workspace.xml
+data/cifar-10-python.tar.gz
+data/cifar-10-batches-py/test_batch
+*.html
+data/cifar-10-batches-py/batches.meta
+data/cifar-10-batches-py/data_batch_2
+data/cifar-10-batches-py/data_batch_1
+data/cifar-10-batches-py/data_batch_3
+data/cifar-10-batches-py/data_batch_5
+data/cifar-10-batches-py/data_batch_4
+.idea/workspace.xml
+__pycache__/KL_Distribution.cpython-310.pyc
