@@ -1,15 +1,11 @@
 # importing all packages that may be needed
 import csv
 import random
-from KL_Distribution import calculate_kl_divergence
 from matplotlib import image as mpimg
 import cv2
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 import os
 from sklearn import metrics
-import tensorflow as tf
 from PIL import Image
 import torch
 import torch.nn as nn
@@ -144,16 +140,20 @@ transform = transforms.Compose([
 utkface_dataset = UTKFaceDataset(root_dir, transform=transform)
 
 # Create a DataLoader for the UTKFace dataset
-utkface_loader = torch.utils.data.DataLoader(utkface_dataset, batch_size=4, shuffle=True, num_workers=2)
+utkface_loader = torch.utils.data.DataLoader(utkface_dataset, batch_size=16, shuffle=True, num_workers=2)
 
 fairfair_dataset = FairfaceDataset(root_dir_fair, transform=transform)
-fairface_loader = torch.utils.data.DataLoader(fairfair_dataset, batch_size= 4, num_workers=2, shuffle=True)
+fairface_loader = torch.utils.data.DataLoader(fairfair_dataset, batch_size=16, num_workers=2, shuffle=True)
 
 fairface_outlier_dataset = FairfaceDataset(root_dir_oe, transform=transform)
-fairface_outlier_loader = torch.utils.data.DataLoader(fairface_outlier_dataset, batch_size=4, shuffle=True, num_workers=2)
+fairface_outlier_loader = torch.utils.data.DataLoader(fairface_outlier_dataset, batch_size=16, shuffle=True, num_workers=2)
 
 utkface_outlier_dataset = FairfaceDataset(root_dir_oe_utk, transform=transform)
-utkface_outlier_loader = torch.utils.data.DataLoader(utkface_outlier_dataset, batch_size=4, shuffle=True, num_workers=2)
+utkface_outlier_loader = torch.utils.data.DataLoader(utkface_outlier_dataset, batch_size=16, shuffle=True, num_workers=2)
+
+oodset = torchvision.datasets.CIFAR10(root='./data', train=True, download=False, transform=transform)
+oodloader = torch.utils.data.DataLoader(oodset, batch_size=16, shuffle=True, num_workers=2)
+
 
 #oodset = torchvision.datasets.CIFAR10(root='./data', train=True,
 #                                        download=True, transform=transform)
@@ -198,9 +198,9 @@ correct_pred = {classname: 0 for classname in classes}
 total_pred = {classname: 0 for classname in classes}
 net = Net().to(device)
 
-weights = torch.tensor([1.5, 1])
+weights = torch.tensor([1.0, 10])
 
-criterion = nn.CrossEntropyLoss(weight=weights)
+criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(net.parameters(), lr=0.001, betas=(0.5, 0.9), amsgrad=True)
 graph_lossE1 = []
 step_pointE1 = []
@@ -226,36 +226,34 @@ if __name__ == '__main__':
 
 
     for epoch in range(15):
-        for in_set, out_set in zip(fairface_loader, utkface_outlier_loader):
+        for in_set, out_set in zip(utkface_loader, fairface_outlier_loader):
             data = torch.cat((in_set[0], out_set[0]), 0)
             target = in_set[1]
             outputs = net(data)
             optimizer.zero_grad()
-#            beta = calculate_kl_divergence(fairface_loader, utkface_outlier_loader)
             beta = beta_step(epoch)
             loss = F.cross_entropy(outputs[:len(in_set[0])], target)
-            loss += beta * -(outputs[len(in_set[0]):].mean(1) - torch.logsumexp(outputs[len(in_set[0]):], dim=1)).mean()
+            loss += 0.5 * -(outputs[len(in_set[0]):].mean(1) - torch.logsumexp(outputs[len(in_set[0]):], dim=1)).mean()
             loss.backward()
             optimizer.step()
             i += 1
             running_loss += loss.item()
-            # cross-entropy from softmax distribution to uniform distribution
 
             # exponential moving average
             loss_avg = loss_avg * 0.8 + float(loss) * 0.2
 
             if i % 200 == 199:
-                print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, loss_avg / 200))
+                print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, loss_avg))
                 if epoch == 0:
-                    graph_lossE1.append(loss_avg / 200)
+                    graph_lossE1.append(loss_avg)
                     step_pointE1.append(i)
 
                 if epoch == 2:
-                    graph_lossE2.append(loss_avg / 200)
+                    graph_lossE2.append(loss_avg)
                     step_pointE2.append(i)
 
                 if epoch == 4:
-                    graph_lossE3.append(loss_avg / 200)
+                    graph_lossE3.append(loss_avg)
                     step_pointE3.append(i)
                 loss_avg = 0.0
 #        scheduler.step()
@@ -272,7 +270,7 @@ if __name__ == '__main__':
     ROCPrediction = torch.tensor([])
     with torch.no_grad():
 
-        for data in utkface_loader:
+        for data in fairface_loader:
             images, labels = data
             outputs = net(images)
             ROCPrediction = torch.cat((ROCPrediction, F.softmax(outputs)[:,1]), 0)

@@ -132,6 +132,8 @@ root_dir_fair = 'C:/Users/lucab/Downloads/fairface-img-margin025-trainval/train'
 csv_root_dir = 'C:/Users/lucab/Downloads/fairface-img-margin025-trainval/train/fairface_label_train.csv'
 root_dir_oe = 'C:/Users/lucab/Downloads/OutliersCompiled/outliers'
 root_dir_oe_utk = 'C:/Users/lucab/Downloads/UTKOutliers/UTKOutliers'
+root_dir_oe_combo = 'C:/Users/lucab/Downloads/CombinedOutliers'
+root_nobaby = 'C:/Users/lucab/Downloads/NoBabyUTK'
 # Defines transformation pipeline by resizing, converting to tensors, and normalizing
 transform = transforms.Compose([
     transforms.Resize((32, 32)),
@@ -157,6 +159,9 @@ utkface_outlier_loader = torch.utils.data.DataLoader(utkface_outlier_dataset, ba
 oodset = torchvision.datasets.CIFAR10(root='./data', train=True, download=False, transform=transform)
 
 oodloader = torch.utils.data.DataLoader(oodset, batch_size=16, shuffle=True, num_workers=2)
+
+combooutlierdataset = UTKFaceDataset(root_dir_oe_combo,transform=transform)
+combooutlierloader = torch.utils.data.DataLoader(combooutlierdataset, batch_size=16, shuffle=True, num_workers=2)
 
 
 class Net(nn.Module):
@@ -284,7 +289,7 @@ classes = ('male', 'female')
 correct_pred = {classname: 0 for classname in classes}
 total_pred = {classname: 0 for classname in classes}
 net = Net().to(device)
-weights = torch.FloatTensor([0.75, 1.5])
+weights = torch.FloatTensor([1, 1.5])
 
 
 criterion = nn.CrossEntropyLoss(weight=weights)
@@ -301,10 +306,10 @@ header_label = []
 beta_graph = []
 inset = torch.tensor([])
 distpath = torch.tensor([])
-true_beta = 0.52
+true_beta = 0.5
 def beta_step(epoch, beta):
     beta_max = np.tanh(beta)
-    return (beta_max) * (1 - np.cos((epoch + 1) / 15 * np.pi))
+    return (beta_max) #* (1 - np.cos((epoch + 1) / 15 * np.pi))
 
 # Different (linear or mlp) NN for estimating beta, with inputs as distance betweens distribution
 if __name__ == '__main__':
@@ -313,21 +318,25 @@ if __name__ == '__main__':
     loss_avg = 0.0
     running_loss = 0.0
     i = 0
-#    utkdist = calculate_image_distribution_fullset(root_dir)
-#    fairdist = calculate_image_distribution_fullset(root_dir_oe)
-#    true_beta = calculate_kl_divergence_fullset(utkdist, fairdist)
-    for epoch in range(15):
-        for in_set, out_set in zip(utkface_loader, fairface_outlier_loader):
+    utkdist = calculate_image_distribution_fullset(root_dir)
+    fairdist = calculate_image_distribution_fullset(root_dir_fair)
+    true_beta = calculate_kl_divergence_fullset(utkdist, fairdist)
+    true_beta = beta_step(1, true_beta)
+    for epoch in range(20):
+        for in_set, out_set in zip(utkface_loader, utkface_outlier_loader):
             data = torch.cat((in_set[0], out_set[0]), 0)
-            target = in_set[1]
-            utkdist = calculate_image_distribution(in_set[0])
-            fairdist = calculate_image_distribution(out_set[0])
-            beta_max = calculate_kl_divergence(utkdist, fairdist)
+            target = torch.cat((in_set[1], out_set[1]), 0)
+#            data = torch.cat((in_set[0], out_set[0]), 0)
+#            target = in_set[1]
+#            utkdist = calculate_image_distribution(in_set[0])
+#            fairdist = calculate_image_distribution(out_set[0])
+#            beta_max = calculate_kl_divergence(utkdist, fairdist)
             outputs = net(data)
             optimizer.zero_grad()
-            beta = beta_step(epoch, beta_max)
-            beta_graph.append(beta)
-            loss = F.cross_entropy(outputs[:len(in_set[0])], target, weight=weights)
+#            beta = beta_step(epoch, true_beta)
+#            beta_graph.append(beta)
+            loss = F.cross_entropy(outputs[:len(data)], target, weight=weights)
+#            loss = F.cross_entropy(outputs[:len(in_set[0])], target, weight=weights)
             loss += true_beta * -(outputs[len(in_set[0]):].mean(1) - torch.logsumexp(outputs[len(in_set[0]):], dim=1)).mean()
             loss.backward()
             optimizer.step()
@@ -337,20 +346,20 @@ if __name__ == '__main__':
 
             if i % 200 == 199:
                 print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, loss_avg))
-                if epoch == 0:
+                if epoch == 4:
                     graph_lossE1.append(loss_avg)
                     step_pointE1.append(i)
 
-                if epoch == 2:
+                if epoch == 9:
                     graph_lossE2.append(loss_avg)
                     step_pointE2.append(i)
 
-                if epoch == 4:
+                if epoch == 14:
                     graph_lossE3.append(loss_avg)
                     step_pointE3.append(i)
                 loss_avg = 0.0
-        true_beta = np.average(beta_graph)
-        true_beta_graph.append(true_beta)
+#        true_beta = np.average(beta_graph)
+#        true_beta_graph.append(true_beta)
 
 
 
@@ -440,7 +449,6 @@ if __name__ == '__main__':
     plt.show()
 
     confusion_matrix = metrics.confusion_matrix(truth, pred)
-#    print(classification_report(truth, pred, labels=classes))
     cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix=confusion_matrix, display_labels=['Male', 'Female'])
     cm_display.plot()
     plt.show()

@@ -5,9 +5,7 @@ import random
 from matplotlib import image as mpimg
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
 import os
-import tensorflow as tf
 from PIL import Image
 import torch
 import torch.nn as nn
@@ -134,10 +132,10 @@ transform = transforms.Compose([
 utkface_dataset = UTKFaceDataset(root_dir, transform=transform)
 
 # Create a DataLoader for the UTKFace dataset
-utkface_loader = torch.utils.data.DataLoader(utkface_dataset, batch_size=4, shuffle=True, num_workers=2)
+utkface_loader = torch.utils.data.DataLoader(utkface_dataset, batch_size=16, shuffle=True, num_workers=2)
 
 fairfair_dataset = FairfaceDataset(root_dir_fair, transform=transform)
-fairface_loader = torch.utils.data.DataLoader(fairfair_dataset, batch_size= 4, num_workers=2)
+fairface_loader = torch.utils.data.DataLoader(fairfair_dataset, batch_size=16, shuffle=True, num_workers=2)
 
 
 
@@ -180,7 +178,6 @@ total_pred = {classname: 0 for classname in classes}
 net = Net()
 
 
-
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(net.parameters(), lr=0.001, betas=(0.5, 0.9), amsgrad=True)
 graph_lossE1 = []
@@ -196,9 +193,9 @@ header_label = []
 # Train
 if __name__ == '__main__':
 
-    for epoch in range(30):
+    for epoch in range(15):
         running_loss = 0.0
-        for i, data in enumerate(utkface_loader, 0):
+        for i, data in enumerate(fairface_loader, 0):
             inputs, labels = data
             optimizer.zero_grad()
             outputs = net(inputs)
@@ -232,25 +229,13 @@ if __name__ == '__main__':
     correct = 0
     total = 0
     oodcorrect, oodtotal = 0, 0
+    ROCPrediction = torch.tensor([])
+
     with torch.no_grad():
-#       for data in utkface_loader:
-#            images, labels = data
-#            outputs = net(images)
-#            _, predicted = torch.max(outputs.data, 1)
-#            total += labels.size(0)
-#            correct += (predicted == labels).sum().item()
-#            truth = torch.cat((truth, labels), 0)
-#            pred = torch.cat((pred, predicted), 0)
-
-#            for label, prediction in zip(labels, predicted):
-#                if label == prediction:
-#                    correct_pred[classes[label]] += 1
-#                total_pred[classes[label]] += 1
-#        print('Finished Testing on UTKFace!')
-
-        for data in fairface_loader:
+        for data in utkface_loader:
             images, labels = data
             outputs = net(images)
+            ROCPrediction = torch.cat((ROCPrediction, F.softmax(outputs)[:,1]), 0)
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
@@ -300,7 +285,7 @@ if __name__ == '__main__':
 #        accuracy = 100 * float(correct_count) / total_pred[classname]
 #        print(f'Accuracy for class: {classname:5s} is {accuracy:.1f} %')
 
-    RocCurveDisplay.from_predictions(truth, pred, color="darkorange")
+    RocCurveDisplay.from_predictions(truth, ROCPrediction, color="darkorange")
     plt.plot([0, 1], [0, 1], "k--", label="chance level (AUC = 0.5)")
     plt.axis("square")
     plt.xlabel("False Positive Rate")
