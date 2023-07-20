@@ -78,8 +78,8 @@ def classify_images(test_images, training_images, training_labels):
 
 
 # Set the paths for your training and testing datasets
-training_dataset_path = 'C:/Users/aashr/OneDrive/Documents/Research Projects/EmoryREU/UTKFace.tar/UTKFace/UTKFace'
-testing_dataset_path = 'C:/Users/aashr/OneDrive/Documents/Research Projects/EmoryREU/train'
+training_dataset_path = 'C:/Users/lucab/Downloads/UTKFace'
+testing_dataset_path = 'C:/Users/lucab/Downloads/fairface-img-margin025-trainval/train'
 
 # Set the target image size
 target_size = (32, 32)

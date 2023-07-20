@@ -1,7 +1,7 @@
 # importing all packages that may be needed
 import csv
 import random
-
+from scipy.stats import entropy
 from matplotlib import image as mpimg
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -121,6 +121,10 @@ class FairfaceDataset(Dataset):
 root_dir = 'C:/Users/lucab/Downloads/UTKFace'
 root_dir_fair = 'C:/Users/lucab/Downloads/fairface-img-margin025-trainval/train'
 csv_root_dir = 'C:/Users/lucab/Downloads/fairface-img-margin025-trainval/train/fairface_label_train.csv'
+root_dir_lfw = 'C:/Users/lucab/Downloads/LFWSet/Images'
+
+
+
 # Defines transformation pipeline by resizing, converting to tensors, and normalizing
 transform = transforms.Compose([
     transforms.Resize((32, 32)),
@@ -137,6 +141,8 @@ utkface_loader = torch.utils.data.DataLoader(utkface_dataset, batch_size=16, shu
 fairfair_dataset = FairfaceDataset(root_dir_fair, transform=transform)
 fairface_loader = torch.utils.data.DataLoader(fairfair_dataset, batch_size=16, shuffle=True, num_workers=2)
 
+lfw_dataset = UTKFaceDataset(root_dir_lfw, transform=transform)
+lfw_loader = torch.utils.data.DataLoader(lfw_dataset, batch_size=16, shuffle=True, num_workers=2)
 
 
 class Net(nn.Module):
@@ -171,15 +177,56 @@ classes = ('male', 'female')
 #classes = ('White', 'Black', 'Asian', 'Indian', 'Other')
 
 
+def calculate_kl_divergence_fullset(p, q):
+    p_sum = np.sum(p)
+    q_sum = np.sum(q)
 
+    if p_sum != 0:
+        p_normalized = p / p_sum
+    else:
+        p_normalized = np.ones_like(p)  # Assign default value of 1 if sum is zero
+
+    if q_sum != 0:
+        q_normalized = q / q_sum
+    else:
+        q_normalized = np.ones_like(q)  # Assign default value of 1 if sum is zero
+
+    if len(p_normalized) < len(q_normalized):
+        p_normalized = np.concatenate((p_normalized, np.zeros(len(q_normalized) - len(p_normalized))))
+    elif len(p_normalized) > len(q_normalized):
+        q_normalized = np.concatenate((q_normalized, np.zeros(len(p_normalized) - len(q_normalized))))
+    print(entropy(p_normalized, q_normalized))
+    return entropy(p_normalized, q_normalized)
+
+def calculate_image_distribution_fullset(dataset_path):
+    image_files = os.listdir(dataset_path)
+    num_images = len(image_files)
+
+    # Initialize an array to store the pixel distributions
+    pixel_distribution = np.zeros((256,))
+
+    for image_file in image_files:
+        image_path = os.path.join(dataset_path, image_file)
+        image = Image.open(image_path)
+        pixels = np.array(image)
+        # Flatten the image and calculate the histogram
+        pixel_values, counts = np.unique(pixels.flatten(), return_counts=True)
+        pixel_distribution[pixel_values] += counts
+
+    return pixel_distribution / (num_images * np.sum(pixel_distribution))
+
+
+def beta_step(epoch, beta):
+    beta_max = np.tanh(beta)
+    return (beta_max) * (beta_max) * (1 - np.cos((epoch + 1) / 20 * np.pi))
 
 correct_pred = {classname: 0 for classname in classes}
 total_pred = {classname: 0 for classname in classes}
 net = Net()
 
-
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(net.parameters(), lr=0.001, betas=(0.5, 0.9), amsgrad=True)
+weights = torch.FloatTensor([1.0, 1.75])
+criterion = nn.CrossEntropyLoss(weight=weights)
+optimizer = optim.Adam(net.parameters(), lr=0.001, betas=(0.45, 0.95), amsgrad=True)
 graph_lossE1 = []
 step_pointE1 = []
 graph_lossE2, step_pointE2 = [], []
@@ -193,7 +240,8 @@ header_label = []
 # Train
 if __name__ == '__main__':
 
-    for epoch in range(15):
+
+    for epoch in range(20):
         running_loss = 0.0
         for i, data in enumerate(fairface_loader, 0):
             inputs, labels = data
@@ -232,7 +280,7 @@ if __name__ == '__main__':
     ROCPrediction = torch.tensor([])
 
     with torch.no_grad():
-        for data in utkface_loader:
+        for data in lfw_loader:
             images, labels = data
             outputs = net(images)
             ROCPrediction = torch.cat((ROCPrediction, F.softmax(outputs)[:,1]), 0)

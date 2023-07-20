@@ -75,8 +75,8 @@ class Net(nn.Module):
 
 # Define the main function
 def main():
-    dataset1_path = 'C:/Users/aashr/OneDrive/Documents/Research Projects/EmoryREU/UTKFace.tar/UTKFace/UTKFace'
-    dataset2_path = 'C:/Users/aashr/OneDrive/Documents/Research Projects/EmoryREU/train'
+    dataset1_path = 'C:/Users/lucab/Downloads/UTKFace'
+    dataset2_path = 'C:/Users/lucab/Downloads/fairface-img-margin025-trainval/train'
 
     transform = transforms.Compose([
         transforms.Resize((100, 100)),

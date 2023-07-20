@@ -3,8 +3,12 @@
   <component name="ChangeListManager">
     <list default="true" id="5a875f85-9ca1-492b-9e20-e1f6f30d3f36" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ActivationPlots.py" beforeDir="false" afterPath="$PROJECT_DIR$/ActivationPlots.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Fisher.py" beforeDir="false" afterPath="$PROJECT_DIR$/Fisher.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/KL_Distribution.py" beforeDir="false" afterPath="$PROJECT_DIR$/KL_Distribution.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Mixed Datasets.py" beforeDir="false" afterPath="$PROJECT_DIR$/Mixed Datasets.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Outlier Exposure.py" beforeDir="false" afterPath="$PROJECT_DIR$/Outlier Exposure.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/TestingEMD.py" beforeDir="false" afterPath="$PROJECT_DIR$/TestingEMD.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/TrainableBetaOE.py" beforeDir="false" afterPath="$PROJECT_DIR$/TrainableBetaOE.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -70,16 +74,5 @@
         </entry>
       </map>
     </option>
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/KL_Distribution.py</url>
-          <line>73</line>
-          <option name="timeStamp" value="58" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
   </component>
 </project>

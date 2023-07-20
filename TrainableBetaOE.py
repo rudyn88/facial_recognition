@@ -1,11 +1,5 @@
 # importing all packages that may be needed
-import csv
 import time
-import random
-from matplotlib import image as mpimg
-import cv2
-import pandas as pd
-import matplotlib.pyplot as plt
 import os
 from sklearn import metrics
 from PIL import Image
@@ -14,23 +8,12 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
-from torch.optim import lr_scheduler
-from torch.optim.lr_scheduler import ExponentialLR, MultiStepLR, CosineAnnealingLR
-from torchvision.datasets import ImageFolder
 import numpy as np
-from torch.utils.data import DataLoader, TensorDataset, WeightedRandomSampler
+from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 import matplotlib.pyplot as plt
-from sklearn.datasets import make_blobs
-from sklearn.model_selection import train_test_split
-from matplotlib.legend_handler import HandlerBase
-import matplotlib.patches as mpatches
 import torch.nn.functional as F
-from sklearn.metrics import roc_auc_score, classification_report
-from sklearn.metrics import accuracy_score, confusion_matrix, roc_auc_score, roc_curve, balanced_accuracy_score, RocCurveDisplay
-import matplotlib.patches as mpatches
-import matplotlib.lines as mlines
-import argparse
+from sklearn.metrics import RocCurveDisplay
 from scipy.stats import entropy
 
 
@@ -134,6 +117,8 @@ root_dir_oe = 'C:/Users/lucab/Downloads/OutliersCompiled/outliers'
 root_dir_oe_utk = 'C:/Users/lucab/Downloads/UTKOutliers/UTKOutliers'
 root_dir_oe_combo = 'C:/Users/lucab/Downloads/CombinedOutliers'
 root_nobaby = 'C:/Users/lucab/Downloads/NoBabyUTK'
+root_dir_lfw = 'C:/Users/lucab/Downloads/LFWSet/Images'
+
 # Defines transformation pipeline by resizing, converting to tensors, and normalizing
 transform = transforms.Compose([
     transforms.Resize((32, 32)),
@@ -141,27 +126,31 @@ transform = transforms.Compose([
     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
 ])
 
+batchsize = 16
+batchsizeoe = 16
+
 # Create an instance of the UTKFaceDataset
 utkface_dataset = UTKFaceDataset(root_dir, transform=transform)
-
 # Create a DataLoader for the UTKFace dataset
-utkface_loader = torch.utils.data.DataLoader(utkface_dataset, batch_size=16, shuffle=True, num_workers=2)
+utkface_loader = torch.utils.data.DataLoader(utkface_dataset, batch_size=batchsize, shuffle=True, num_workers=2)
 
 fairfair_dataset = UTKFaceDataset(root_dir_fair, transform=transform)
-fairface_loader = torch.utils.data.DataLoader(fairfair_dataset, batch_size=16, num_workers=2, shuffle=True)
+fairface_loader = torch.utils.data.DataLoader(fairfair_dataset, batch_size=batchsize, num_workers=2, shuffle=True)
 
 fairface_outlier_dataset = FairfaceDataset(root_dir_oe, transform=transform)
-fairface_outlier_loader = torch.utils.data.DataLoader(fairface_outlier_dataset, batch_size=16, shuffle=True, num_workers=2)
+fairface_outlier_loader = torch.utils.data.DataLoader(fairface_outlier_dataset, batch_size=(batchsizeoe), shuffle=True, num_workers=2)
 
 utkface_outlier_dataset = FairfaceDataset(root_dir_oe_utk, transform=transform)
-utkface_outlier_loader = torch.utils.data.DataLoader(utkface_outlier_dataset, batch_size=16, shuffle=True, num_workers=2)
+utkface_outlier_loader = torch.utils.data.DataLoader(utkface_outlier_dataset, batch_size=(batchsizeoe), shuffle=True, num_workers=2)
 
 oodset = torchvision.datasets.CIFAR10(root='./data', train=True, download=False, transform=transform)
-
-oodloader = torch.utils.data.DataLoader(oodset, batch_size=16, shuffle=True, num_workers=2)
+oodloader = torch.utils.data.DataLoader(oodset, batch_size=batchsize, shuffle=True, num_workers=2)
 
 combooutlierdataset = UTKFaceDataset(root_dir_oe_combo,transform=transform)
-combooutlierloader = torch.utils.data.DataLoader(combooutlierdataset, batch_size=16, shuffle=True, num_workers=2)
+combooutlierloader = torch.utils.data.DataLoader(combooutlierdataset, batch_size=batchsize, shuffle=True, num_workers=2)
+
+lfw_dataset = UTKFaceDataset(root_dir_lfw, transform=transform)
+lfw_loader = torch.utils.data.DataLoader(lfw_dataset, batch_size=batchsize, shuffle=True, num_workers=2)
 
 
 class Net(nn.Module):
@@ -172,7 +161,8 @@ class Net(nn.Module):
         self.pool = nn.AvgPool2d(2, 2)
         self.conv2 = nn.Conv2d(32, 128, 5)
         self.fc1 = nn.Linear(128 * 5 * 5, 120)
-        self.fc2 = nn.Linear(120, 30)
+        self.fc2 = nn.Linear(120, 60)
+        self.fc4 = nn.Linear(60, 30)
         self.fc3 = nn.Linear(30, 2)  # UTKFace dataset has 2 classes: male and female, 5 race classes, a lot of age classes
 
     # defines forward pass and returns an output
@@ -182,6 +172,7 @@ class Net(nn.Module):
         x = x.view(-1, 128 * 5 * 5)
         x = F.tanh(self.fc1(x))
         x = F.tanh(self.fc2(x))
+        x = F.tanh(self.fc4(x))
         x = self.fc3(x)
         return x
 
@@ -193,10 +184,8 @@ class BetaNet(nn.Module):
         x = self.fc(x)
         return x
 
-def calculate_image_distribution(dataset_path):
-#    image_files = os.listdir(dataset_path)
-#    num_images = len(image_files)
-#    imagesplit = torch.split(dataset_path, 16)
+def calculate_image_distribution(dataset_path, batchsize):
+
     # Initialize an array to store the pixel distributions
     pixel_distribution = np.zeros((256,))
     for pixels in dataset_path:
@@ -204,13 +193,8 @@ def calculate_image_distribution(dataset_path):
         for idx, data in enumerate(counts):
             pixel_distribution[idx] += data
 
-#    for image_file in image_files:
-#        image_path = os.path.join(dataset_path, image_file)
-#        image = Image.open(image_path)
-#        pixels = np.array(image)
-        # Flatten the image and calculate the histogram
 
-    return pixel_distribution / (16 * np.sum(pixel_distribution))
+    return pixel_distribution / (batchsize * np.sum(pixel_distribution))
 
 def calculate_kl_divergence(p, q):
     p_sum = np.sum(p)
@@ -264,12 +248,13 @@ def calculate_image_distribution_fullset(dataset_path):
     pixel_distribution = np.zeros((256,))
 
     for image_file in image_files:
-        image_path = os.path.join(dataset_path, image_file)
-        image = Image.open(image_path)
-        pixels = np.array(image)
+        if image_file.endswith('.jpg') or image_file.endswith('.png'):
+            image_path = os.path.join(dataset_path, image_file)
+            image = Image.open(image_path)
+            pixels = np.array(image)
         # Flatten the image and calculate the histogram
-        pixel_values, counts = np.unique(pixels.flatten(), return_counts=True)
-        pixel_distribution[pixel_values] += counts
+            pixel_values, counts = np.unique(pixels.flatten(), return_counts=True)
+            pixel_distribution[pixel_values] += counts
 
     return pixel_distribution / (num_images * np.sum(pixel_distribution))
 
@@ -309,7 +294,7 @@ distpath = torch.tensor([])
 true_beta = 0.5
 def beta_step(epoch, beta):
     beta_max = np.tanh(beta)
-    return (beta_max) #* (1 - np.cos((epoch + 1) / 15 * np.pi))
+    return (beta_max) * (beta_max) * (1 - np.cos((epoch + 1) / 20 * np.pi))
 
 # Different (linear or mlp) NN for estimating beta, with inputs as distance betweens distribution
 if __name__ == '__main__':
@@ -318,22 +303,22 @@ if __name__ == '__main__':
     loss_avg = 0.0
     running_loss = 0.0
     i = 0
-    utkdist = calculate_image_distribution_fullset(root_dir)
-    fairdist = calculate_image_distribution_fullset(root_dir_fair)
-    true_beta = calculate_kl_divergence_fullset(utkdist, fairdist)
-    true_beta = beta_step(1, true_beta)
+    utkdist = calculate_image_distribution_fullset(root_dir_fair)
+    fairdist = calculate_image_distribution_fullset(root_dir_lfw)
+    true_beta = np.tanh(calculate_kl_divergence_fullset(utkdist, fairdist))
+#    true_beta = beta_step(1, true_beta)
     for epoch in range(20):
-        for in_set, out_set in zip(utkface_loader, utkface_outlier_loader):
+        for in_set, out_set in zip(fairface_loader, utkface_outlier_loader):
             data = torch.cat((in_set[0], out_set[0]), 0)
             target = torch.cat((in_set[1], out_set[1]), 0)
 #            data = torch.cat((in_set[0], out_set[0]), 0)
 #            target = in_set[1]
-#            utkdist = calculate_image_distribution(in_set[0])
-#            fairdist = calculate_image_distribution(out_set[0])
+#            utkdist = calculate_image_distribution(in_set[0], batchsize)
+#            fairdist = calculate_image_distribution(out_set[0], batchsizeoe)
 #            beta_max = calculate_kl_divergence(utkdist, fairdist)
             outputs = net(data)
             optimizer.zero_grad()
-#            beta = beta_step(epoch, true_beta)
+#            beta = beta_step(epoch, beta_max)
 #            beta_graph.append(beta)
             loss = F.cross_entropy(outputs[:len(data)], target, weight=weights)
 #            loss = F.cross_entropy(outputs[:len(in_set[0])], target, weight=weights)
@@ -379,7 +364,7 @@ if __name__ == '__main__':
     ROCPrediction = torch.tensor([])
 
     with torch.no_grad():
-        for data in fairface_loader:
+        for data in lfw_loader:
             images, labels = data
             outputs = net(images)
             ROCPrediction = torch.cat((ROCPrediction, F.softmax((outputs)[:,1])), 0)

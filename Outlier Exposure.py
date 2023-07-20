@@ -1,9 +1,4 @@
 # importing all packages that may be needed
-import csv
-import random
-from matplotlib import image as mpimg
-import cv2
-import pandas as pd
 import os
 from sklearn import metrics
 from PIL import Image
@@ -12,23 +7,12 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
-from torch.optim import lr_scheduler
-from torch.optim.lr_scheduler import ExponentialLR, MultiStepLR, CosineAnnealingLR
-from torchvision.datasets import ImageFolder
 import numpy as np
-from torch.utils.data import DataLoader, TensorDataset, WeightedRandomSampler
+from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 import matplotlib.pyplot as plt
-from sklearn.datasets import make_blobs
-from sklearn.model_selection import train_test_split
-from matplotlib.legend_handler import HandlerBase
-import matplotlib.patches as mpatches
 import torch.nn.functional as F
-from sklearn.metrics import roc_auc_score, classification_report
-from sklearn.metrics import accuracy_score, confusion_matrix, roc_auc_score, roc_curve, balanced_accuracy_score, RocCurveDisplay
-import matplotlib.patches as mpatches
-import matplotlib.lines as mlines
-import argparse
+from sklearn.metrics import RocCurveDisplay
 
 
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
@@ -198,7 +182,6 @@ correct_pred = {classname: 0 for classname in classes}
 total_pred = {classname: 0 for classname in classes}
 net = Net().to(device)
 
-weights = torch.tensor([1.0, 10])
 
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(net.parameters(), lr=0.001, betas=(0.5, 0.9), amsgrad=True)
@@ -211,7 +194,6 @@ image_list = []
 sample_dict = {}
 header_label = []
 # Train
-
 
 beta_max = 0.6
 def beta_step(epoch):
@@ -232,7 +214,7 @@ if __name__ == '__main__':
             outputs = net(data)
             optimizer.zero_grad()
             beta = beta_step(epoch)
-            loss = F.cross_entropy(outputs[:len(in_set[0])], target)
+            loss = criterion(outputs[:len(in_set[0])], target)
             loss += 0.5 * -(outputs[len(in_set[0]):].mean(1) - torch.logsumexp(outputs[len(in_set[0]):], dim=1)).mean()
             loss.backward()
             optimizer.step()

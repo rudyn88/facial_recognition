@@ -6,8 +6,6 @@ import shutil
 import csv
 import matplotlib.pyplot as plt
 
-def calculate_fisher_divergence(p, q):
-    print('hello world')
 
 def calculate_kl_divergence(p, q):
     p_sum = np.sum(p)
@@ -38,20 +36,21 @@ def calculate_image_distribution(dataset_path):
     pixel_distribution = np.zeros((256,))
 
     for image_file in image_files:
-        image_path = os.path.join(dataset_path, image_file)
-        image = Image.open(image_path)
-        pixels = np.array(image)
-        # Flatten the image and calculate the histogram
-        pixel_values, counts = np.unique(pixels.flatten(), return_counts=True)
-        pixel_distribution[pixel_values] += counts
+        if image_file.endswith('.jpg'):
+            image_path = os.path.join(dataset_path, image_file)
+            image = Image.open(image_path)
+            pixels = np.array(image)
+            # Flatten the image and calculate the histogram
+            pixel_values, counts = np.unique(pixels.flatten(), return_counts=True)
+            pixel_distribution[pixel_values] += counts
 
     return pixel_distribution / (num_images * np.sum(pixel_distribution))
 
 # Original dataset path
-original_dataset_path = 'C:/Users/lucab/Downloads/UTKFace'
+original_dataset_path = 'C:/Users/lucab/Downloads/fairface-img-margin025-trainval/train'
 
 # New dataset path
-new_dataset_path = 'C:/Users/lucab/Downloads/fairface-img-margin025-trainval/train'
+new_dataset_path = 'C:/Users/lucab/Downloads/LFWSet/Images'
 
 # Threshold to determine outliers
 threshold = 0.1
@@ -71,7 +70,7 @@ def plot_distribution(distributions, titles):
     plt.legend(titles)
     plt.show()
 
-plot_distribution([original_distribution, new_distribution], ["Original Dataset", "New Dataset"])
+plot_distribution([original_distribution, new_distribution], ["UTKFace", "Fairface"])
 
 # Calculate the KL divergence between the two datasets
 kl_divergence = calculate_kl_divergence(original_distribution, new_distribution)
@@ -83,26 +82,27 @@ print("KL Divergence (New -> Original):", kl_divergence_flipped)
 
 # Sort the images by their KL divergence in descending order
 
-
+'''
 image_scores = []
 image_files = os.listdir(new_dataset_path)
 
 for image_file in image_files:
-    image_path = os.path.join(new_dataset_path, image_file)
-    image = Image.open(image_path)
-    pixels = np.array(image)
-    pixel_values, counts = np.unique(pixels.flatten(), return_counts=True)
-    image_distribution_normalized = counts / (np.sum(counts) * np.sum(new_distribution))
-    kl_divergence = calculate_kl_divergence(image_distribution_normalized, original_distribution)
-    image_scores.append((image_file, kl_divergence))
+    if image_file.endswith('.jpg'):
+        image_path = os.path.join(new_dataset_path, image_file)
+        image = Image.open(image_path)
+        pixels = np.array(image)
+        pixel_values, counts = np.unique(pixels.flatten(), return_counts=True)
+        image_distribution_normalized = counts / (np.sum(counts) * np.sum(new_distribution))
+        kl_divergence = calculate_kl_divergence(image_distribution_normalized, new_distribution)
+        image_scores.append((image_file, kl_divergence))
 
 image_scores.sort(key=lambda x: x[1], reverse=True)
-"""
+
 # Find the largest 20% of outliers
 num_outliers = int(len(image_scores) * 0.2)
 largest_outliers = image_scores[:num_outliers]
 
-output_folder = 'C:/Users/aashr/OneDrive/Documents/Research Projects/EmoryREU/UTKOutliers'
+output_folder = 'C:/Users/lucab/Downloads/KL Outliers'
 os.makedirs(output_folder, exist_ok=True)
 
 # Copy identified outlier images to the output folder
@@ -120,4 +120,4 @@ with open(csv_path, 'w', newline='') as csvfile:
 
 print("Identified outliers have been copied to:", output_folder)
 print("Outlier information has been saved to:", csv_path)
-"""
+'''
