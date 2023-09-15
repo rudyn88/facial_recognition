@@ -9,10 +9,10 @@ from torchvision.models import resnet18
 from PIL import Image
 import torch.nn.functional as F
 from torch.distributions import kl_divergence
-from scipy.stats import distance
 import matplotlib.pyplot as plt
 import torch.distributions as D
 import numpy as np
+import shutil
 
 
 # Define the dataset class
@@ -83,8 +83,8 @@ class Net(nn.Module):
 # Define the main function
 def main():
     # Set the paths to your datasets
-    dataset1_path = 'C:/Users/aashr/OneDrive/Documents/Research Projects/EmoryREU/UTKFace.tar/UTKFace/UTKFace'
-    dataset2_path = 'C:/Users/aashr/OneDrive/Documents/Research Projects/EmoryREU/train'
+    dataset1_path = 'C:/Users/lucab/Downloads/UTKFace'
+    dataset2_path = 'C:/Users/lucab/Downloads/fairface-img-margin025-trainval/train'
 
     # Define the transformations for image preprocessing
     transform = transforms.Compose([
@@ -127,9 +127,7 @@ def main():
         for images, labels in dataloader1:
             images = images.to(device)
             labels = labels.to(device)
-
             optimizer.zero_grad()
-
             outputs = model(images)
             loss = criterion(outputs, labels)
             loss.backward()
@@ -182,11 +180,23 @@ def main():
     kl_div = np.mean(kl_divs)
     print(f"KL Divergence: {kl_div:.4f}")  
 
+    num_outliers = int(len(kl_divs) * 0.2)
+    largest_outliers = kl_divs[:num_outliers]
+
+    output_folder = 'C:/Users/lucab/Downloads/FeatureOutliers'
+    os.makedirs(output_folder, exist_ok=True)
+
+    # Copy identified outlier images to the output folder
+    for image_file, _ in largest_outliers:
+        source_path = os.path.join(dataset1_path, image_file)
+        destination_path = os.path.join(output_folder, image_file)
+        shutil.copy(source_path, destination_path)
+    """
     activations1_np = activations1[:, 1].cpu().numpy()
     activations2_np = activations2[:, 1].cpu().numpy()
 
-    """activations1_np = activations1_np.flatten()
-    activations2_np = activations2_np.flatten()"""
+#    activations1_np = activations1_np.flatten()
+#    activations2_np = activations2_np.flatten()
 
     min_length = min(len(activations1_np), len(activations2_np))
     activations1_np_truncated = activations1_np[:min_length]
@@ -206,6 +216,9 @@ def main():
     plt.ylabel('Frequency')
     plt.legend()
     plt.show()
-    
+
+
+
+"""
 if __name__ == '__main__':
     main()

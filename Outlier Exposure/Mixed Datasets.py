@@ -122,7 +122,8 @@ root_dir = 'C:/Users/lucab/Downloads/UTKFace'
 root_dir_fair = 'C:/Users/lucab/Downloads/fairface-img-margin025-trainval/train'
 csv_root_dir = 'C:/Users/lucab/Downloads/fairface-img-margin025-trainval/train/fairface_label_train.csv'
 root_dir_lfw = 'C:/Users/lucab/Downloads/LFWSet/Images'
-
+root_dir_imdb = 'C:/Users/lucab/Downloads/imdb/imdbnew'
+root_dir_celeb = 'C:/Users/lucab/Downloads/celebA/'
 
 
 # Defines transformation pipeline by resizing, converting to tensors, and normalizing
@@ -144,6 +145,11 @@ fairface_loader = torch.utils.data.DataLoader(fairfair_dataset, batch_size=16, s
 lfw_dataset = UTKFaceDataset(root_dir_lfw, transform=transform)
 lfw_loader = torch.utils.data.DataLoader(lfw_dataset, batch_size=16, shuffle=True, num_workers=2)
 
+imdb_dataset = UTKFaceDataset(root_dir_imdb, transform=transform)
+imdb_loader = torch.utils.data.DataLoader(imdb_dataset, batch_size=16, shuffle=True, num_workers=2)
+
+celeb_dataset = UTKFaceDataset(root_dir_celeb, transform=transform)
+celeb_loader = torch.utils.data.DataLoader(celeb_dataset, batch_size=16, shuffle=True, num_workers=2)
 
 class Net(nn.Module):
     # Initializes layers of network by defining convolutional layers, max-pooling layers, and fully connected layers with appropriate and output sizes
@@ -216,16 +222,12 @@ def calculate_image_distribution_fullset(dataset_path):
     return pixel_distribution / (num_images * np.sum(pixel_distribution))
 
 
-def beta_step(epoch, beta):
-    beta_max = np.tanh(beta)
-    return (beta_max) * (beta_max) * (1 - np.cos((epoch + 1) / 20 * np.pi))
-
 correct_pred = {classname: 0 for classname in classes}
 total_pred = {classname: 0 for classname in classes}
 net = Net()
 
-weights = torch.FloatTensor([1.0, 1.75])
-criterion = nn.CrossEntropyLoss(weight=weights)
+#weights = torch.FloatTensor([1.0, 1.75])
+criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(net.parameters(), lr=0.001, betas=(0.45, 0.95), amsgrad=True)
 graph_lossE1 = []
 step_pointE1 = []
@@ -239,7 +241,6 @@ sample_dict = {}
 header_label = []
 # Train
 if __name__ == '__main__':
-
 
     for epoch in range(20):
         running_loss = 0.0
@@ -276,7 +277,6 @@ if __name__ == '__main__':
     # Test the network on the test data
     correct = 0
     total = 0
-    oodcorrect, oodtotal = 0, 0
     ROCPrediction = torch.tensor([])
 
     with torch.no_grad():

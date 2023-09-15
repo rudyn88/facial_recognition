@@ -118,6 +118,9 @@ root_dir_oe_utk = 'C:/Users/lucab/Downloads/UTKOutliers/UTKOutliers'
 root_dir_oe_combo = 'C:/Users/lucab/Downloads/CombinedOutliers'
 root_nobaby = 'C:/Users/lucab/Downloads/NoBabyUTK'
 root_dir_lfw = 'C:/Users/lucab/Downloads/LFWSet/Images'
+root_dir_imdb = 'C:/Users/lucab/Downloads/imdb/imdbnew'
+root_dir_celeb = 'C:/Users/lucab/Downloads/celebA/'
+
 
 # Defines transformation pipeline by resizing, converting to tensors, and normalizing
 transform = transforms.Compose([
@@ -143,8 +146,8 @@ fairface_outlier_loader = torch.utils.data.DataLoader(fairface_outlier_dataset, 
 utkface_outlier_dataset = FairfaceDataset(root_dir_oe_utk, transform=transform)
 utkface_outlier_loader = torch.utils.data.DataLoader(utkface_outlier_dataset, batch_size=(batchsizeoe), shuffle=True, num_workers=2)
 
-oodset = torchvision.datasets.CIFAR10(root='./data', train=True, download=False, transform=transform)
-oodloader = torch.utils.data.DataLoader(oodset, batch_size=batchsize, shuffle=True, num_workers=2)
+#oodset = torchvision.datasets.CIFAR10(root='./data', train=True, download=False, transform=transform)
+#oodloader = torch.utils.data.DataLoader(oodset, batch_size=batchsize, shuffle=True, num_workers=2)
 
 combooutlierdataset = UTKFaceDataset(root_dir_oe_combo,transform=transform)
 combooutlierloader = torch.utils.data.DataLoader(combooutlierdataset, batch_size=batchsize, shuffle=True, num_workers=2)
@@ -152,6 +155,11 @@ combooutlierloader = torch.utils.data.DataLoader(combooutlierdataset, batch_size
 lfw_dataset = UTKFaceDataset(root_dir_lfw, transform=transform)
 lfw_loader = torch.utils.data.DataLoader(lfw_dataset, batch_size=batchsize, shuffle=True, num_workers=2)
 
+imdb_dataset = UTKFaceDataset(root_dir_imdb, transform=transform)
+imdb_loader = torch.utils.data.DataLoader(imdb_dataset, batch_size=batchsize, shuffle=True, num_workers=2)
+
+celeb_dataset = UTKFaceDataset(root_dir_celeb, transform=transform)
+celeb_loader = torch.utils.data.DataLoader(celeb_dataset, batch_size=16, shuffle=True, num_workers=2)
 
 class Net(nn.Module):
     # Initializes layers of network by defining convolutional layers, max-pooling layers, and fully connected layers with appropriate and output sizes
@@ -274,11 +282,11 @@ classes = ('male', 'female')
 correct_pred = {classname: 0 for classname in classes}
 total_pred = {classname: 0 for classname in classes}
 net = Net().to(device)
-weights = torch.FloatTensor([1, 1.5])
+weights = torch.FloatTensor([1, 1])
 
 
 criterion = nn.CrossEntropyLoss(weight=weights)
-optimizer = optim.Adam(net.parameters(), lr=0.001, betas=(0.5, 0.9), amsgrad=True)
+optimizer = optim.Adam(net.parameters(), lr=0.001, betas=(0.45, 0.95), amsgrad=True)
 graph_lossE1 = []
 step_pointE1 = []
 graph_lossE2, step_pointE2 = [], []
@@ -303,11 +311,14 @@ if __name__ == '__main__':
     loss_avg = 0.0
     running_loss = 0.0
     i = 0
-    utkdist = calculate_image_distribution_fullset(root_dir_fair)
-    fairdist = calculate_image_distribution_fullset(root_dir_lfw)
-    true_beta = np.tanh(calculate_kl_divergence_fullset(utkdist, fairdist))
-#    true_beta = beta_step(1, true_beta)
-    for epoch in range(20):
+#    utkdist = calculate_image_distribution_fullset(root_dir_fair)
+#    fairdist = calculate_image_distribution_fullset(root_dir_oe_utk)
+#    beta = np.tanh(calculate_kl_divergence_fullset(utkdist, fairdist))
+    beta = np.tanh(0.08354227042157544)
+#    print('Distribution calculation time: %.2f' % (time.time() - initialT), 'seconds')
+#    initialT = time.time()
+#    beta = beta_step(1, true_beta)
+    for epoch in range(25):
         for in_set, out_set in zip(fairface_loader, utkface_outlier_loader):
             data = torch.cat((in_set[0], out_set[0]), 0)
             target = torch.cat((in_set[1], out_set[1]), 0)
@@ -320,9 +331,10 @@ if __name__ == '__main__':
             optimizer.zero_grad()
 #            beta = beta_step(epoch, beta_max)
 #            beta_graph.append(beta)
+#            loss = criterion(outputs, target)
             loss = F.cross_entropy(outputs[:len(data)], target, weight=weights)
 #            loss = F.cross_entropy(outputs[:len(in_set[0])], target, weight=weights)
-            loss += true_beta * -(outputs[len(in_set[0]):].mean(1) - torch.logsumexp(outputs[len(in_set[0]):], dim=1)).mean()
+            loss += beta * -(outputs[len(in_set[0]):].mean(1) - torch.logsumexp(outputs[len(in_set[0]):], dim=1)).mean()
             loss.backward()
             optimizer.step()
             i += 1
@@ -364,7 +376,7 @@ if __name__ == '__main__':
     ROCPrediction = torch.tensor([])
 
     with torch.no_grad():
-        for data in lfw_loader:
+        for data in celeb_loader:
             images, labels = data
             outputs = net(images)
             ROCPrediction = torch.cat((ROCPrediction, F.softmax((outputs)[:,1])), 0)
