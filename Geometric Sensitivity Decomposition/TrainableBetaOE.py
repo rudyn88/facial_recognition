@@ -4,6 +4,7 @@ import os
 from sklearn import metrics
 from PIL import Image
 import torch
+import torch.cuda
 import torch.nn as nn
 import torch.optim as optim
 import torchvision
@@ -17,9 +18,8 @@ from sklearn.metrics import RocCurveDisplay
 from scipy.stats import entropy
 
 
-os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
-os.environ["CUDA_LAUNCH_BLOCKING"]="1"
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+#os.environ["CUDA_LAUNCH_BLOCKING"]="1"
 
 
 # Defining a dataset class
@@ -110,16 +110,16 @@ class FairfaceDataset(Dataset):
         return len(self.images)
 
 # Set the root directory of the UTKFace dataset
-root_dir = 'C:/Users/lucab/Downloads/UTKFace'
-root_dir_fair = 'C:/Users/lucab/Downloads/fairface-img-margin025-trainval/train'
+root_dir = 'C:/Users/lucab/Downloads/UTKFace/UTKFace'
+root_dir_fair = 'C:/Users/lucab/Downloads/fairface-img-margin025-trainval/fairface-img-margin025-trainval/train'
 csv_root_dir = 'C:/Users/lucab/Downloads/fairface-img-margin025-trainval/train/fairface_label_train.csv'
-root_dir_oe = 'C:/Users/lucab/Downloads/OutliersCompiled/outliers'
-root_dir_oe_utk = 'C:/Users/lucab/Downloads/UTKOutliers/UTKOutliers'
-root_dir_oe_combo = 'C:/Users/lucab/Downloads/CombinedOutliers'
-root_nobaby = 'C:/Users/lucab/Downloads/NoBabyUTK'
-root_dir_lfw = 'C:/Users/lucab/Downloads/LFWSet/Images'
-root_dir_imdb = 'C:/Users/lucab/Downloads/imdb/imdbnew'
-root_dir_celeb = 'C:/Users/lucab/Downloads/celebA/'
+root_dir_oe = 'C:/Users/lucab/Downloads/OutliersCompiled/OutliersCompiled/outliers'
+root_dir_oe_utk = 'C:/Users/lucab/Downloads/UTKOutliers/UTKOutliers/UTKOutliers'
+root_dir_oe_combo = 'C:/Users/lucab/Downloads/CombinedOutliers/CombinedOutliers'
+root_nobaby = 'C:/Users/lucab/Downloads/NoBabyUTK/NoBabyUTK'
+root_dir_lfw = 'C:/Users/lucab/Downloads/LFWSet/LFWSet/Images'
+#root_dir_imdb = 'C:/Users/lucab/Downloads/imdb/imdbnew'
+root_dir_celeb = 'C:/Users/lucab/Downloads/celebA/celebA'
 
 
 # Defines transformation pipeline by resizing, converting to tensors, and normalizing
@@ -155,8 +155,8 @@ combooutlierloader = torch.utils.data.DataLoader(combooutlierdataset, batch_size
 lfw_dataset = UTKFaceDataset(root_dir_lfw, transform=transform)
 lfw_loader = torch.utils.data.DataLoader(lfw_dataset, batch_size=batchsize, shuffle=True, num_workers=2)
 
-imdb_dataset = UTKFaceDataset(root_dir_imdb, transform=transform)
-imdb_loader = torch.utils.data.DataLoader(imdb_dataset, batch_size=batchsize, shuffle=True, num_workers=2)
+#imdb_dataset = UTKFaceDataset(root_dir_imdb, transform=transform)
+#imdb_loader = torch.utils.data.DataLoader(imdb_dataset, batch_size=batchsize, shuffle=True, num_workers=2)
 
 celeb_dataset = UTKFaceDataset(root_dir_celeb, transform=transform)
 celeb_loader = torch.utils.data.DataLoader(celeb_dataset, batch_size=16, shuffle=True, num_workers=2)
@@ -281,8 +281,8 @@ classes = ('male', 'female')
 
 correct_pred = {classname: 0 for classname in classes}
 total_pred = {classname: 0 for classname in classes}
-net = Net().to(device)
-weights = torch.FloatTensor([1, 1])
+net = Net()#.to(device)
+weights = torch.FloatTensor([1, 1.15])
 
 
 criterion = nn.CrossEntropyLoss(weight=weights)
@@ -306,6 +306,8 @@ def beta_step(epoch, beta):
 
 # Different (linear or mlp) NN for estimating beta, with inputs as distance betweens distribution
 if __name__ == '__main__':
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(torch.cuda.is_available())
     print(device)
     initialT = time.time()
     loss_avg = 0.0
@@ -318,7 +320,7 @@ if __name__ == '__main__':
 #    print('Distribution calculation time: %.2f' % (time.time() - initialT), 'seconds')
 #    initialT = time.time()
 #    beta = beta_step(1, true_beta)
-    for epoch in range(25):
+    for epoch in range(20):
         for in_set, out_set in zip(fairface_loader, utkface_outlier_loader):
             data = torch.cat((in_set[0], out_set[0]), 0)
             target = torch.cat((in_set[1], out_set[1]), 0)
