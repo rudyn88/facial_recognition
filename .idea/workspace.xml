@@ -8,7 +8,11 @@
       <change beforePath="$PROJECT_DIR$/.idea/facial_recognition.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/facial_recognition.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+<<<<<<< Updated upstream
       <change beforePath="$PROJECT_DIR$/Geometric Sensitivity Decomposition/TrainableBetaOE.py" beforeDir="false" afterPath="$PROJECT_DIR$/Geometric Sensitivity Decomposition/TrainableBetaOE.py" afterDir="false" />
+=======
+      <change beforePath="$PROJECT_DIR$/ActivationFeatureOutlier.py" beforeDir="false" afterPath="$PROJECT_DIR$/ActivationFeatureOutlier.py" afterDir="false" />
+>>>>>>> Stashed changes
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -37,6 +41,10 @@
     <option name="stateVersion" value="1" />
   </component>
   <component name="ProjectColorInfo">{
+<<<<<<< Updated upstream
+=======
+  &quot;customColor&quot;: &quot;&quot;,
+>>>>>>> Stashed changes
   &quot;associatedIndex&quot;: 0
 }</component>
   <component name="ProjectId" id="2RCptPj24DW3GXZBwTYfwU7UNSL" />
@@ -45,6 +53,7 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
+<<<<<<< Updated upstream
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "RunOnceActivity.OpenProjectViewOnStart": "true",
@@ -52,6 +61,14 @@
     "git-widget-placeholder": "Luca__WIP__branch",
     "ignore.virus.scanning.warn.message": "true",
     "settings.editor.selected.configurable": "preferences.keymap"
+=======
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.lookFeel&quot;
+>>>>>>> Stashed changes
   }
 }]]></component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
@@ -75,5 +92,16 @@
         </entry>
       </map>
     </option>
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/ActivationFeatureOutlier.py</url>
+          <line>121</line>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>
