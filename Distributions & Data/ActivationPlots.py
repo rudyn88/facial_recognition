@@ -84,8 +84,9 @@ class Net(nn.Module):
 # Define the main function
 def main():
     # Set the paths to your datasets
-    dataset1_path = 'C:/Users/aashr/OneDrive/Documents/Research Projects/EmoryREU/UTKFace.tar/UTKFace/UTKFace'
-    dataset2_path = 'C:/Users/aashr/OneDrive/Documents/Research Projects/EmoryREU/train'
+    dataset1_path = 'C:/Users/lucab/Downloads/fairface-img-margin025-trainval/fairface-img-margin025-trainval/train'
+    dataset2_path = 'C:/Users/lucab/Downloads/celebA/celebA'
+    dataset3_path = 'C:/Users/lucab/Downloads/UTKFace/UTKFace'
 
     # Define the transformations for image preprocessing
     transform = transforms.Compose([
@@ -96,11 +97,13 @@ def main():
 
     # Create instances of the datasets
     dataset1 = FacialImageDataset(dataset1_path, transform=transform)
-    dataset2 = FacialImageDataset(dataset2_path, transform=transform)
+#    dataset2 = FacialImageDataset(dataset2_path, transform=transform)
+    dataset3 = FacialImageDataset(dataset3_path, transform=transform)
 
     # Create data loaders for the datasets
     dataloader1 = DataLoader(dataset1, batch_size=32, shuffle=True)
-    dataloader2 = DataLoader(dataset2, batch_size=32, shuffle=True)
+#    dataloader2 = DataLoader(dataset2, batch_size=32, shuffle=True)
+    dataloader3= DataLoader(dataset3, batch_size=32, shuffle=True)
 
     # Initialize the neural network model
     # num_classes = len(dataset2.classes)
@@ -122,8 +125,10 @@ def main():
 
     activations1 = []
     activations2 = []
+    activations3 = []
     activation_features1 = []
     activation_features2 = []
+    activation_features3 = []
 
     for epoch in range(num_epochs):
         model.train()
@@ -150,42 +155,70 @@ def main():
 
     # Save the intermediate activations from dataset2
     model.eval()
+#    with torch.no_grad():
+#        for images, _ in dataloader2:
+#            images = images.to(device)
+#            activations2.append(model(images).detach().clone())
+#            activation_features2.append(model.resnet.fc.weight.data.clone().flatten().numpy())
     with torch.no_grad():
-        for images, _ in dataloader2:
+        for images, _ in dataloader3:
             images = images.to(device)
-            activations2.append(model(images).detach().clone())
-            activation_features2.append(model.resnet.fc.weight.data.clone().flatten().numpy())
+            activations3.append(model(images).detach().clone())
+            activation_features3.append(model.resnet.fc.weight.data.clone().flatten().numpy())
 
     # After training, you can use the model to calculate the KL divergence or perform other tasks
-
+    print('Moving on')
     activations1 = torch.cat(activations1, dim=0)
-    activations2 = torch.cat(activations2, dim=0)
+#    activations2 = torch.cat(activations2, dim=0)
+    activations3 = torch.cat(activations3, dim=0)
     activation_features1 = np.concatenate(activation_features1, axis=0)
-    activation_features2 = np.concatenate(activation_features2, axis=0)
+#    activation_features2 = np.concatenate(activation_features2, axis=0)
+    activation_features3 = np.concatenate(activation_features3, axis=0)
 
+    print('Features found')
     # Convert activations to probability distributions
-    activations1 = F.softmax(activations1, dim=1)
-    activations2 = F.softmax(activations2, dim=1)
+#    activations1 = F.softmax(activations1, dim=1)
+#    activations2 = F.softmax(activations2, dim=1)
 
     unique_features1, counts1 = np.unique(activation_features1, return_counts=True)
-    unique_features2, counts2 = np.unique(activation_features2, return_counts=True)
+#    unique_features2, counts2 = np.unique(activation_features2, return_counts=True)
+    unique_features3, counts3 = np.unique(activation_features3, return_counts=True)
+#    print(unique_features1, counts1)
+#    print(unique_features2, counts2)
+#    print(unique_features3, counts3)
 
+    print('Plotting time')
     # Plot the activation features and their frequencies for each dataset
+    plt.figure()
+    plt.bar(unique_features1, counts1, color='blue', label='FairFace')
+    plt.bar(unique_features3, counts3, color='orange', label='UTKFace')
+    plt.xlabel('Activation Feature', fontsize=18)
+    plt.ylabel('Frequency', fontsize=18)
+    plt.title('Activation Features', fontsize=20)
+    plt.legend(fontsize=18)
+    plt.savefig('C:/Users/lucab/OneDrive/Desktop/REU Graphs/KL Test 1')
+
+'''
+   plt.figure()
+    plt.bar(unique_features2, counts2, color='blue', label='CelebA')
+    plt.xlabel('Activation Feature', fontsize=16)
+    plt.ylabel('Frequency', fontsize=16)
+    plt.title('CelebA Activation Features', fontsize=18)
+    plt.legend()
+    plt.savefig('C:/Users/lucab/OneDrive/Desktop/REU Graphs/KL Test 2')
+
+    plt.figure()
+    plt.xlabel('Activation Feature', fontsize=16)
+    plt.ylabel('Frequency', fontsize=16)
+    plt.title('CelebA Activation Features', fontsize=18)
+    plt.legend()
+    plt.savefig('C:/Users/lucab/OneDrive/Desktop/REU Graphs/KL Test 3')
 # Plot for Dataset 1 Activation Features
-    plt.figure(figsize=(10, 5))
-    plt.bar(unique_features1, counts1, color='blue')
-    plt.xlabel('Activation Feature', fontsize=12)
-    plt.ylabel('Frequency', fontsize=12)
-    plt.title('UTK Face Activation Features', fontsize=14)
-    plt.show()
+'''
 
 # Plot for Dataset 2 Activation Features
-    plt.figure(figsize=(10, 5))
-    plt.bar(unique_features2, counts2, color='orange')
-    plt.xlabel('Activation Feature', fontsize=12)
-    plt.ylabel('Frequency', fontsize=12)
-    plt.title('FairFace Activation Features', fontsize=14)
-    plt.show()
+
+
 
 
 

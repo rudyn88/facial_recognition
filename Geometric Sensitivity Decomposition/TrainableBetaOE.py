@@ -120,7 +120,7 @@ root_nobaby = 'C:/Users/lucab/Downloads/NoBabyUTK/NoBabyUTK'
 root_dir_lfw = 'C:/Users/lucab/Downloads/LFWSet/LFWSet/Images'
 #root_dir_imdb = 'C:/Users/lucab/Downloads/imdb/imdbnew'
 root_dir_celeb = 'C:/Users/lucab/Downloads/celebA/celebA'
-
+root_dir_utkfeat = 'C:/Users/lucab/Downloads/UTKFaceOutliersFeature'
 
 # Defines transformation pipeline by resizing, converting to tensors, and normalizing
 transform = transforms.Compose([
@@ -160,6 +160,10 @@ lfw_loader = torch.utils.data.DataLoader(lfw_dataset, batch_size=batchsize, shuf
 
 celeb_dataset = UTKFaceDataset(root_dir_celeb, transform=transform)
 celeb_loader = torch.utils.data.DataLoader(celeb_dataset, batch_size=16, shuffle=True, num_workers=2)
+
+utkface_outlierfeat_dataset = UTKFaceDataset(root_dir_utkfeat, transform=transform)
+utkface_outlierfeat_loader = torch.utils.data.DataLoader(utkface_outlierfeat_dataset, batch_size=batchsize, shuffle=True, num_workers=2)
+
 
 class Net(nn.Module):
     # Initializes layers of network by defining convolutional layers, max-pooling layers, and fully connected layers with appropriate and output sizes
@@ -282,7 +286,7 @@ classes = ('male', 'female')
 correct_pred = {classname: 0 for classname in classes}
 total_pred = {classname: 0 for classname in classes}
 net = Net()#.to(device)
-weights = torch.FloatTensor([1, 1.15])
+weights = torch.FloatTensor([0.987, 1.075])
 
 
 criterion = nn.CrossEntropyLoss(weight=weights)
@@ -304,6 +308,7 @@ def beta_step(epoch, beta):
     beta_max = np.tanh(beta)
     return (beta_max) * (beta_max) * (1 - np.cos((epoch + 1) / 20 * np.pi))
 
+# dist gap beta between feat and fair = 0.07893939037666489
 # Different (linear or mlp) NN for estimating beta, with inputs as distance betweens distribution
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -313,25 +318,25 @@ if __name__ == '__main__':
     loss_avg = 0.0
     running_loss = 0.0
     i = 0
-#    utkdist = calculate_image_distribution_fullset(root_dir_fair)
-#    fairdist = calculate_image_distribution_fullset(root_dir_oe_utk)
+#    utkdist = calculate_image_distribution_fullset(root_dir)
+#    fairdist = calculate_image_distribution_fullset(root_dir_utkfeat)
 #    beta = np.tanh(calculate_kl_divergence_fullset(utkdist, fairdist))
-    beta = np.tanh(0.08354227042157544)
+    beta_1 = np.tanh(0.07893939037666489)
 #    print('Distribution calculation time: %.2f' % (time.time() - initialT), 'seconds')
 #    initialT = time.time()
 #    beta = beta_step(1, true_beta)
     for epoch in range(20):
-        for in_set, out_set in zip(fairface_loader, utkface_outlier_loader):
+        for in_set, out_set in zip(fairface_loader, utkface_outlierfeat_loader):
             data = torch.cat((in_set[0], out_set[0]), 0)
             target = torch.cat((in_set[1], out_set[1]), 0)
 #            data = torch.cat((in_set[0], out_set[0]), 0)
 #            target = in_set[1]
 #            utkdist = calculate_image_distribution(in_set[0], batchsize)
 #            fairdist = calculate_image_distribution(out_set[0], batchsizeoe)
-#            beta_max = calculate_kl_divergence(utkdist, fairdist)
+#            beta = calculate_kl_divergence(utkdist, fairdist)
             outputs = net(data)
             optimizer.zero_grad()
-#            beta = beta_step(epoch, beta_max)
+            beta = beta_step(epoch, beta_1)
 #            beta_graph.append(beta)
 #            loss = criterion(outputs, target)
             loss = F.cross_entropy(outputs[:len(data)], target, weight=weights)
@@ -398,7 +403,7 @@ if __name__ == '__main__':
     print(total_pred)
     print(correct_pred)
 
-
+    trial = 6
     # print accuracy for each class
     plt.figure()
     for classname, correct_count in correct_pred.items():
@@ -408,28 +413,28 @@ if __name__ == '__main__':
          plt.bar(classname, float(total_pred[classname]), color='#84c2e8', width=0.2, align='edge', label= 'Predicted')
          plt.bar(classname, float(correct_count), color='#f86ffc', width=-0.2, align='edge', label= 'Actual')
     print('Accuracy of the network on the test images: %.2f %%' % (100 * correct / total))
-    plt.xlabel("Races")
+    plt.xlabel("Gender")
     plt.ylabel("No. of People")
     plt.legend(['Predicted', 'Actual'])
-    plt.show()
+    plt.savefig('C:/Users/lucab/OneDrive/Desktop/REU Graphs/FeatUTKOutlier/Accuracy CelebA Feat OE ' + str(trial))
 
-    plt.figure
-    plt.plot(step_pointE1, graph_lossE1, label= 'Epoch 1')
-    plt.plot(step_pointE2, graph_lossE2, label= 'Epoch 2')
-    plt.plot(step_pointE3, graph_lossE3, label= 'Epoch 3')
-    plt.xlabel("Number of iteration")
-    plt.ylabel("Loss")
-    plt.title("Loss vs Number of iteration")
-    plt.legend()
-    plt.show()
+#    plt.figure
+#    plt.plot(step_pointE1, graph_lossE1, label= 'Epoch 1')
+#    plt.plot(step_pointE2, graph_lossE2, label= 'Epoch 2')
+#    plt.plot(step_pointE3, graph_lossE3, label= 'Epoch 3')
+#    plt.xlabel("Number of iteration")
+#    plt.ylabel("Loss")
+#    plt.title("Loss vs Number of iteration")
+#    plt.legend()
+#    plt.show()
 
 #    plt.figure
 #    plt.plot(beta_graph, label= 'Beta')
 #    plt.show()
 
-    plt.figure
-    plt.plot(true_beta_graph, label= 'Beta')
-    plt.show()
+#    plt.figure
+#    plt.plot(true_beta_graph, label= 'Beta')
+#    plt.show()
 
 #    correct_pred = 0
 #    total_pred = 0
@@ -445,12 +450,12 @@ if __name__ == '__main__':
     plt.ylabel("True Positive Rate")
     plt.title("ROC curve")
     plt.legend()
-    plt.show()
+    plt.savefig('C:/Users/lucab/OneDrive/Desktop/REU Graphs/FeatUTKOutlier/ROC CelebA Feat OE ' + str(trial))
 
     confusion_matrix = metrics.confusion_matrix(truth, pred)
     cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix=confusion_matrix, display_labels=['Male', 'Female'])
     cm_display.plot()
-    plt.show()
+    plt.savefig('C:/Users/lucab/OneDrive/Desktop/REU Graphs/FeatUTKOutlier/CM CelebA Feat OE ' + str(trial))
 
 
 

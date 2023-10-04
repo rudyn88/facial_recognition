@@ -111,10 +111,9 @@ features1 = extract_features(dataset1, dataloader1)
 features2 = extract_features(dataset2, dataloader2)
 
 # Calculate the difference in activation features
-feature_diff = torch.rot90(torch.abs(features1 - features2.mean(dim=0)))
-print(feature_diff)
-print(torch.abs(features1 - features2.mean(dim=0)))
 
+print(torch.abs(features1.mean(dim=0) - features2.mean(dim=0)))
+'''
 # Calculate the top 20% outliers based on feature difference
 num_outliers = int(len(dataset1) * 0.20)
 print(len(feature_diff), '\n', num_outliers)
@@ -139,3 +138,4 @@ for idx in top_outliers_indices:
 
 
 print(f"{num_outliers} outlier images copied to {output_folder}.")
+'''
